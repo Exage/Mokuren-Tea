@@ -1,7 +1,7 @@
 # Mokuren Tea
 
-A minimal monorepo scaffold using pnpm workspaces and Turborepo.
-Applications and shared packages will be added as development progresses.
+A monorepo using pnpm workspaces and Turborepo.
+The NestJS backend connects to MongoDB through Mongoose.
 
 ## Requirements
 
@@ -17,11 +17,23 @@ pnpm install --frozen-lockfile
 ## Structure
 
 ```text
-apps/       — future storefront, backend, and admin applications
-packages/   — future shared packages and configuration
+apps/backend/ — NestJS API and local MongoDB configuration
+packages/     — future shared packages and configuration
 ```
 
-These directories are currently empty; `.gitkeep` files preserve them in Git.
+See [the backend guide](apps/backend/README.md) for configuration and commands.
+
+## Local development
+
+```sh
+cp apps/backend/.env.example apps/backend/.env
+pnpm --filter @mokuren/backend db:up
+pnpm dev
+```
+
+The database command requires Docker with Compose running. If MongoDB is already
+running locally or remotely, skip it and set `MONGODB_URI` in `apps/backend/.env`.
+The API health endpoint is `http://localhost:3001/api/health`.
 
 ## Commands
 
@@ -36,7 +48,7 @@ pnpm format:check
 ```
 
 Turborepo runs the corresponding scripts from each application's or package's
-`package.json`. Until applications and packages are added, these commands execute no tasks.
+`package.json`. Backend tests build the application first through the Turbo task graph.
 
 `pnpm format` and `pnpm format:check` run directly from the root and process
 supported files throughout the monorepo, including `apps/` and `packages/`.
@@ -45,9 +57,8 @@ can override them. Formatting on save in VS Code requires the
 `esbenp.prettier-vscode` extension; workspace settings are already defined in
 `.vscode/settings.json`.
 
-Build caching is currently disabled. When adding applications, specify their
-actual build artifacts in `outputs` and enable caching. Configure test caching
-after choosing the testing tools.
+Build caching is enabled for the backend's `dist/` artifacts in its package-level
+`turbo.json`. The root defaults keep build and test caching disabled for new packages.
 
 ## Adding an application or package
 
