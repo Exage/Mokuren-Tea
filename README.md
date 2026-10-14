@@ -1,29 +1,29 @@
 # Mokuren Tea
 
-Базовый каркас монорепозитория на pnpm workspaces и Turborepo.
-Приложения и общие пакеты добавляются по мере разработки.
+A minimal monorepo scaffold using pnpm workspaces and Turborepo.
+Applications and shared packages will be added as development progresses.
 
-## Требования
+## Requirements
 
-- Node.js 24 (точная версия для nvm указана в `.nvmrc`).
-- pnpm 11.0.8 (версия закреплена в `package.json`).
+- Node.js 24 (the exact version for nvm is specified in `.nvmrc`).
+- pnpm 11.0.8 (pinned in `package.json`).
 
-## Установка
+## Installation
 
 ```sh
 pnpm install --frozen-lockfile
 ```
 
-## Структура
+## Structure
 
 ```text
-apps/       — будущие сайт, бэкенд и админка
-packages/   — будущие общие пакеты и настройки
+apps/       — future storefront, backend, and admin applications
+packages/   — future shared packages and configuration
 ```
 
-Пока директории пусты; `.gitkeep` сохраняет их в Git.
+These directories are currently empty; `.gitkeep` files preserve them in Git.
 
-## Команды
+## Commands
 
 ```sh
 pnpm dev
@@ -31,22 +31,31 @@ pnpm build
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm format
+pnpm format:check
 ```
 
-Turborepo запускает соответствующие скрипты из `package.json` приложений
-и пакетов. Пока они не добавлены, команды не выполняют задач.
+Turborepo runs the corresponding scripts from each application's or package's
+`package.json`. Until applications and packages are added, these commands execute no tasks.
 
-Кеширование сборки пока отключено: при добавлении приложений нужно указать
-их реальные артефакты в `outputs` и включить кеширование. Кеширование тестов
-настраивается после выбора тестовых инструментов.
+`pnpm format` and `pnpm format:check` run directly from the root and process
+supported files throughout the monorepo, including `apps/` and `packages/`.
+Shared formatting rules are defined in `.prettierrc.json`; local configurations
+can override them. Formatting on save in VS Code requires the
+`esbenp.prettier-vscode` extension; workspace settings are already defined in
+`.vscode/settings.json`.
 
-## Добавление приложения или пакета
+Build caching is currently disabled. When adding applications, specify their
+actual build artifacts in `outputs` and enable caching. Configure test caching
+after choosing the testing tools.
 
-1. Создать директорию в `apps/` или `packages/`.
-2. Добавить `package.json` с уникальным именем, `private: true` и нужными скриптами.
-3. Объявить используемые зависимости в этом `package.json`.
-4. Выполнить `pnpm install` из корня монорепозитория.
+## Adding an application or package
 
-Для локальных зависимостей использовать `workspace:*`.
-Файл `pnpm-lock.yaml` хранить в Git; в CI устанавливать зависимости
-через `pnpm install --frozen-lockfile`.
+1. Create a directory under `apps/` or `packages/`.
+2. Add a `package.json` with a unique name, `private: true`, and the required scripts.
+3. Declare the dependencies used by the application or package in its `package.json`.
+4. Run `pnpm install` from the monorepo root.
+
+Use `workspace:*` for local dependencies.
+Commit `pnpm-lock.yaml` to Git and install dependencies in CI with
+`pnpm install --frozen-lockfile`.
