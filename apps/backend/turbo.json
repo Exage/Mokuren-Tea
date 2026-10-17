@@ -2,13 +2,24 @@
   "extends": ["//"],
   "tasks": {
     "dev": {
-      "passThroughEnv": ["NODE_ENV", "PORT", "MONGODB_URI"]
+      "passThroughEnv": [
+        "NODE_ENV",
+        "PORT",
+        "MONGODB_URI",
+        "CLOUDINARY_CLOUD_NAME",
+        "CLOUDINARY_API_KEY",
+        "CLOUDINARY_API_SECRET",
+        "CLOUDINARY_ASSET_FOLDER"
+      ]
     },
     "build": {
       "cache": true,
       "outputs": ["dist/**"]
     },
     "test": {
+      "dependsOn": ["build"]
+    },
+    "test:integration": {
       "dependsOn": ["build"]
     }
   }

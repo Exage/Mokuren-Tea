@@ -3,7 +3,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config'
 import { MongooseModule } from '@nestjs/mongoose'
 import { fileURLToPath } from 'node:url'
 import { validateEnvironment } from './config/environment.js'
-import { HealthController } from './health/health-controller.js'
+import { HealthController } from './health/health.controller.js'
+import { MediaAssetsModule } from './media-assets/media-assets.module.js'
+import { ProductsModule } from './products/products.module.js'
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { HealthController } from './health/health-controller.js'
         retryDelay: 1000,
       }),
     }),
+    ProductsModule,
+    MediaAssetsModule,
   ],
   controllers: [HealthController],
 })

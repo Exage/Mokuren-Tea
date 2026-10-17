@@ -35,3 +35,41 @@ test('rejects unknown runtime environments', () => {
     /NODE_ENV/
   )
 })
+
+test('keeps Cloudinary optional outside production', () => {
+  const config = validateEnvironment({ MONGODB_URI: mongoUri })
+  assert.equal(config.CLOUDINARY_CLOUD_NAME, undefined)
+  assert.equal(config.CLOUDINARY_ASSET_FOLDER, undefined)
+})
+
+test('validates Cloudinary credentials and asset folder together', () => {
+  const cloud = {
+    CLOUDINARY_CLOUD_NAME: 'demo',
+    CLOUDINARY_API_KEY: 'key',
+    CLOUDINARY_API_SECRET: 'secret',
+    CLOUDINARY_ASSET_FOLDER: 'tea shop',
+  }
+
+  const config = validateEnvironment({ MONGODB_URI: mongoUri, ...cloud })
+  assert.equal(config.CLOUDINARY_ASSET_FOLDER, 'tea shop')
+
+  assert.throws(
+    () => validateEnvironment({ MONGODB_URI: mongoUri, NODE_ENV: 'production', ...cloud, CLOUDINARY_ASSET_FOLDER: '' }),
+    /CLOUDINARY_ASSET_FOLDER/
+  )
+  assert.throws(
+    () => validateEnvironment({ MONGODB_URI: mongoUri, ...cloud, CLOUDINARY_ASSET_FOLDER: undefined }),
+    /CLOUDINARY_ASSET_FOLDER/
+  )
+  assert.throws(
+    () =>
+      validateEnvironment({
+        MONGODB_URI: mongoUri,
+        NODE_ENV: 'production',
+        CLOUDINARY_CLOUD_NAME: 'demo',
+        CLOUDINARY_API_KEY: 'key',
+        CLOUDINARY_API_SECRET: 'secret',
+      }),
+    /CLOUDINARY_ASSET_FOLDER/
+  )
+})

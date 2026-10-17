@@ -1,7 +1,7 @@
 import 'reflect-metadata'
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { HealthController } from '../dist/health/health-controller.js'
+import { HealthController } from '../dist/health/health.controller.js'
 
 test('reports a healthy database only after a successful ping', async () => {
   const controller = new HealthController({

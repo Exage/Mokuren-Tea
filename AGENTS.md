@@ -22,7 +22,7 @@ These rules apply to application code and shared packages throughout this monore
 
 ## Naming
 
-- Use `kebab-case` for application source file and folder names. Standard tool, framework, documentation, and configuration filenames are exempt.
+- Use `kebab-case` for application source file and folder names. In the backend, append architectural roles with a dot: `products.module.ts`, `products.service.ts`, `create-product.dto.ts`. See [backend module conventions](apps/backend/docs/modules.md). Standard tool, framework, documentation, and configuration filenames are exempt.
 - Prefer clear domain names over vague names such as `manager`, `processor`, or `helpers` when a more specific name exists.
 
 ## Comments
@@ -48,6 +48,11 @@ These rules apply to application code and shared packages throughout this monore
 
 ## Conditional statements
 
+- Prefer truthiness checks for presence or absence: use `if (alt)` for a present value and `if (!alt)` for a missing or empty value.
+- Avoid explicit comparisons with `undefined` or `null` unless the logic must distinguish them from other falsy values such as `''`, `0`, or `false`.
+- Preserve the condition's intent: `alt !== undefined` checks for a defined value, while `!alt` checks for a falsy value; do not mechanically replace one with the other.
+- Prefer `||` over `??` for fallback values when both have the same intended behavior. For example, use `adminId || null` when an empty ID should also count as absent.
+- Keep `??` when valid falsy values such as `0`, `false`, or `''` must be preserved. Before replacing an existing `??`, check the possible inputs and validation behavior; do not mask invalid falsy inputs with a fallback or change behavior merely for stylistic consistency.
 - Always use braces for `if`, `else if`, and `else` bodies, including single statements and early returns.
 - Put each body on separate lines inside its braces. Do not write one-line conditional statements, even with braces.
 

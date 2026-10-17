@@ -31,8 +31,11 @@ pnpm --filter @mokuren/backend db:up
 pnpm dev
 ```
 
-The database command requires Docker with Compose running. If MongoDB is already
-running locally or remotely, skip it and set `MONGODB_URI` in `apps/backend/.env`.
+The database command requires Docker with Compose running. It automatically
+initializes a single-node replica set and publishes container port `27017` at
+`127.0.0.1:27018`. Data is stored in a persistent Docker volume. If a suitable
+MongoDB replica set is already available, skip this command and set `MONGODB_URI`
+in `apps/backend/.env`.
 The API health endpoint is `http://localhost:3001/api/health`.
 
 ## Commands
