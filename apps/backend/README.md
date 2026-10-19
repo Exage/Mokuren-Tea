@@ -105,10 +105,13 @@ src/
   health/health.controller.ts    API and database readiness
   auth/                         Minimal real admin session guard (MongoDB-backed)
   audit/                        Append-only audit log written in shared transactions
+  categories/                   Category schema, service, repository, and admin/public routes
   products/                     Product cards, variants, publication, public catalog
   inventory/                    Zero-stock creation and stock reads for products
   media-assets/                 Cloudinary image library, product bindings, deletion
 test/
+  category-slug.test.mjs        Slug/name normalization and sortOrder validation (no MongoDB)
+  category-mapper.test.mjs      Public and admin category projections (no MongoDB)
   product-publication.test.mjs  Publication readiness rules (no MongoDB)
   product-availability.test.mjs Availability and minimum price rules (no MongoDB)
   integration/                  API tests on an in-memory MongoDB replica set
@@ -148,11 +151,60 @@ view adds resolved `images`, the public catalog returns optimized Cloudinary
 URLs (`f_auto,q_auto`, fixed `w_800` catalog / `w_1600` detail presets, no
 client-supplied transformations) with `width`/`height`.
 
+## Categories
+
+Categories are identified by a unique, normalized slug. Display names are not
+unique, and there is no `normalizedName` field. Slugs are trimmed and lowercased
+before validation and persistence (`"  OOLONG  "` becomes `"oolong"`). Renaming a
+category does not change its slug; an explicit slug change normalizes identically.
+
+Public discovery (`GET /api/categories`, no session) shows only categories
+referenced by at least one published product; inventory availability does not
+affect visibility.
+
+Admin routes (all behind the admin session guard):
+
+```text
+GET    /api/categories                         public list (visible categories only)
+GET    /api/admin/categories                   paginated (?search, ?page, ?limit)
+POST   /api/admin/categories                   { name, slug, sortOrder? } -> 201
+PATCH  /api/admin/categories/:id               { name?, slug?, sortOrder? } -> 200
+POST   /api/admin/categories/:id/move-and-delete { targetCategoryId? } -> 200
+```
+
+Slugs are protected by a unique index; a duplicate normalized slug returns
+`409 CONFLICT`. Deleting a category that still references products requires
+`targetCategoryId`; every referencing product (all statuses) moves to the target
+and the source is removed atomically with audit. An empty category may be
+deleted without a target, returning `targetCategoryId: null` and count `0`.
+
+### Legacy data compatibility
+
+Existing category documents may lack `createdAt`, `updatedAt`, `sortOrder`, or
+`referenceRevision` (raw inserts before this feature existed). Before the
+category API serves existing records, run the read-only migration report to
+diagnose, then the repeatable backfill to fill missing technical defaults:
+
+```sh
+# 1. Read-only diagnosis (no data is modified)
+node dist/categories/categories-migration.cli.js report
+
+# 2. Backfill missing timestamps and technical fields on legacy records
+node dist/categories/categories-migration.cli.js backfill
+```
+
+The backfill is idempotent: valid fields are never rewritten, and repeated runs
+are safe. Backfill timestamps are migration-time values, not known original
+creation dates.
+
+
 Service commands (run `build` first):
 
 ```sh
 pnpm --filter @mokuren/backend reconcile:media   # adopt or fail stuck uploading, finish deleting
 pnpm --filter @mokuren/backend recount:media-usage  # one-time usageCount recount from Product.imageIds
+node dist/categories/categories-migration.cli.js   # read-only pre-migration report
+node dist/categories/categories-migration.cli.js backfill   # backfill legacy category technical fields
 ```
 
 Run `recount:media-usage` once after deploying, before relying on delete
@@ -167,6 +219,15 @@ db.mediaassets.createIndex({ status: 1, createdAt: -1 })
 db.mediaassets.createIndex({ status: 1, updatedAt: 1 })
 db.mediaassets.createIndex({ originalName: 1 })
 db.mediaassets.createIndex({ cloudinaryAssetId: 1 }, { sparse: true })
+```
+
+Category indexes — create the unique slug index only after confirming there are
+no normalization collisions (run the migration report first), then verify it
+exists before enabling category writes:
+
+```js
+db.categories.createIndex({ slug: 1 }, { unique: true })
+db.categories.createIndex({ sortOrder: 1, _id: 1 })
 ```
 
 Add business modules and Mongoose schemas when their requirements are defined.

@@ -37,16 +37,52 @@ export class ProductsRepository {
     return product.save({ session })
   }
 
-  findCategoryById(id: Types.ObjectId, session?: ClientSession) {
-    return (
-      this.connection.db
-        ?.collection('categories')
-        .findOne({ _id: id }, { projection: { _id: 1 }, session }) || null
+  countProductsByCategory(categoryId: Types.ObjectId, session?: ClientSession) {
+    return this.productModel.countDocuments({ categoryId }).session(session || null).exec()
+  }
+
+  findPublishedCategoryIds() {
+    return this.productModel.distinct('categoryId', {
+      status: 'published',
+      categoryId: { $exists: true, $ne: null },
+    })
+  }
+
+  reassignProductsByCategory(
+    sourceCategoryId: Types.ObjectId,
+    targetCategoryId: Types.ObjectId,
+    session: ClientSession
+  ) {
+    return this.productModel.updateMany(
+      { categoryId: sourceCategoryId },
+      { $set: { categoryId: targetCategoryId } },
+      { session }
     )
   }
 
-  findCategoryBySlug(slug: string) {
-    return this.connection.db?.collection('categories').findOne({ slug }) || null
+  async countProductsByCategories(
+    ids: Types.ObjectId[],
+    session?: ClientSession
+  ): Promise<Map<string, number>> {
+    if (ids.length === 0) {
+      return new Map()
+    }
+
+    const rows = await this.productModel
+      .aggregate([
+        { $match: { categoryId: { $in: ids } } },
+        { $group: { _id: '$categoryId', count: { $sum: 1 } } },
+      ])
+      .session(session || null)
+      .exec()
+
+    const counts = new Map<string, number>()
+
+    for (const row of rows) {
+      counts.set(String(row._id), row.count)
+    }
+
+    return counts
   }
 
   countTasteNotes(ids: Types.ObjectId[], session: ClientSession) {

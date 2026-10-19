@@ -83,7 +83,13 @@ export async function seedReferences(db) {
   const tasteCreamy = new Types.ObjectId()
   const imageId = new Types.ObjectId()
 
-  await db.collection('categories').insertOne({ _id: categoryId, name: 'Oolong', slug: 'oolong' })
+  await db.collection('categories').insertOne({
+    _id: categoryId,
+    name: 'Oolong',
+    slug: 'oolong',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })
   await db.collection('tastenotes').insertMany([
     { _id: tasteFloral, name: 'Floral', slug: 'floral' },
     { _id: tasteCreamy, name: 'Creamy', slug: 'creamy' },

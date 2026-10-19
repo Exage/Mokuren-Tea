@@ -4,6 +4,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Types } from 'mongoose'
 import { InventoryService } from '../inventory/inventory.service.js'
 import { MediaAssetsService } from '../media-assets/media-assets.service.js'
+import { CategoriesService } from '../categories/categories.service.js'
 import { ProductCatalogQueryDto } from './dto/product-catalog-query.dto.js'
 import { toProductPrice } from './domain/product-price.js'
 import type { LoadedImage, LoadedStock, PublicProductView } from './products.types.js'
@@ -20,6 +21,7 @@ interface CatalogPage {
 export class ProductCatalogService {
   constructor(
     private readonly productsRepository: ProductsRepository,
+    private readonly categoriesService: CategoriesService,
     private readonly inventoryService: InventoryService,
     private readonly mediaAssetsService: MediaAssetsService
   ) {}
@@ -124,7 +126,7 @@ export class ProductCatalogService {
       if (Types.ObjectId.isValid(category)) {
         criteria.categoryId = new Types.ObjectId(category)
       } else {
-        const found = await this.productsRepository.findCategoryBySlug(category.toLowerCase())
+        const found = await this.categoriesService.findBySlug(category.toLowerCase())
 
         if (!found) {
           return { items: [], pagination: { page, limit, totalItems: 0, totalPages: 1 } }

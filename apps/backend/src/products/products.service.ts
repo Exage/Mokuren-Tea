@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto'
 import { Types } from 'mongoose'
 import type { ClientSession, Connection } from 'mongoose'
 import { AuditService } from '../audit/audit.service.js'
+import { CategoriesService } from '../categories/categories.service.js'
 import { InventoryService } from '../inventory/inventory.service.js'
 import { MediaAssetsService } from '../media-assets/media-assets.service.js'
 import { AdminProductsQueryDto } from './dto/admin-products-query.dto.js'
@@ -107,6 +108,7 @@ function assertUniqueVariantWeights(variants: StoredVariant[]): void {
 export class ProductsService {
   constructor(
     private readonly productsRepository: ProductsRepository,
+    private readonly categoriesService: CategoriesService,
     private readonly inventoryService: InventoryService,
     private readonly mediaAssetsService: MediaAssetsService,
     private readonly auditService: AuditService,
@@ -168,7 +170,7 @@ export class ProductsService {
 
     if (input.categoryId !== undefined && input.categoryId !== null) {
       const categoryId = toObjectId(input.categoryId, 'categoryId')
-      const found = await this.productsRepository.findCategoryById(categoryId, session)
+      const found = await this.categoriesService.findById(categoryId, session)
 
       if (!found) {
         throw new NotFoundException({ code: 'NOT_FOUND', message: 'Category does not exist' })
@@ -227,6 +229,12 @@ export class ProductsService {
         { categoryId: dto.categoryId, tasteNoteIds: dto.tasteNoteIds, imageIds: dto.imageIds },
         session
       )
+
+      // Protect the category binding so a concurrent deletion cannot remove
+      // the category while this product references it.
+      if (dto.categoryId) {
+        await this.categoriesService.lockReferences([dto.categoryId], session)
+      }
 
       const variants = (dto.variants || []).map((variant) => toStoredVariant(variant))
       assertUniqueVariantWeights(variants)
@@ -385,6 +393,23 @@ export class ProductsService {
       }
 
       if (dto.categoryId !== undefined) {
+        // An incomplete draft may be kept without a category, but a
+        // published product must always remain bound to one.
+        if (product.status === 'published' && dto.categoryId === null) {
+          throw new ConflictException({
+            code: 'INVALID_STATUS_TRANSITION',
+            message: 'Published products cannot be cleared of their category',
+          })
+        }
+
+        if (dto.categoryId !== null) {
+          const next = new Types.ObjectId(dto.categoryId)
+
+          if (!product.categoryId || !product.categoryId.equals(next)) {
+            await this.categoriesService.lockReferences([dto.categoryId], session)
+          }
+        }
+
         product.categoryId = dto.categoryId ? new Types.ObjectId(dto.categoryId) : null
         changes.categoryId = dto.categoryId
       }
@@ -591,9 +616,13 @@ export class ProductsService {
 
       let categoryExists = false
 
-      if (this.productsRepository.isReady() && product.categoryId) {
-        const found = await this.productsRepository.findCategoryById(product.categoryId, session)
+      if (product.categoryId) {
+        const found = await this.categoriesService.findById(product.categoryId, session)
         categoryExists = Boolean(found)
+
+        // Lock the category binding so a concurrent transfer or deletion
+        // cannot remove it while this product is published against it.
+        await this.categoriesService.lockReferences([product.categoryId.toHexString()], session)
       }
 
       const imageIds = toImageIdStrings((product.imageIds as unknown[]) || [])
@@ -679,5 +708,44 @@ export class ProductsService {
       toImageIdStrings((archived.imageIds as unknown[]) || [])
     )
     return this.toProductView(archived, images, stock)
+  }
+
+  async countProductsByCategory(categoryId: string, session?: ClientSession): Promise<number> {
+    const id = toObjectId(categoryId, 'categoryId')
+    return this.productsRepository.countProductsByCategory(id, session)
+  }
+
+  async findPublishedCategoryIds(): Promise<string[]> {
+    const ids = await this.productsRepository.findPublishedCategoryIds()
+    return ids.map((id) => String(id))
+  }
+
+  async reassignProductsByCategory(
+    sourceCategoryId: string,
+    targetCategoryId: string,
+    session: ClientSession
+  ): Promise<{ matched: number; modified: number }> {
+    const source = toObjectId(sourceCategoryId, 'categoryId')
+    const target = toObjectId(targetCategoryId, 'categoryId')
+
+    if (source.equals(target)) {
+      return { matched: 0, modified: 0 }
+    }
+
+    const result = await this.productsRepository.reassignProductsByCategory(
+      source,
+      target,
+      session
+    )
+
+    return {
+      matched: result.matchedCount,
+      modified: result.modifiedCount,
+    }
+  }
+
+  async countProductsByCategories(categoryIds: string[], session?: ClientSession): Promise<Map<string, number>> {
+    const ids = categoryIds.map((id) => toObjectId(id, 'categoryId'))
+    return this.productsRepository.countProductsByCategories(ids, session)
   }
 }

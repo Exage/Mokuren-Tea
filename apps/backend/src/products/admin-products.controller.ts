@@ -28,8 +28,7 @@ export class AdminProductsController {
   }
 
   @Post()
-  // TODO: Restore admin authentication for product creation.
-  // @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard)
   @ApiOperation({ summary: 'Create a draft product' })
   @ApiOkResponse({ type: AdminProductResponse })
   create(

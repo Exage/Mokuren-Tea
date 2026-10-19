@@ -6,6 +6,7 @@ import { validateEnvironment } from './config/environment.js'
 import { HealthController } from './health/health.controller.js'
 import { MediaAssetsModule } from './media-assets/media-assets.module.js'
 import { ProductsModule } from './products/products.module.js'
+import { CategoryManagementModule } from './categories/category-management.module.js'
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ProductsModule } from './products/products.module.js'
     }),
     ProductsModule,
     MediaAssetsModule,
+    CategoryManagementModule,
   ],
   controllers: [HealthController],
 })

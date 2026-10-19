@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common'
 import { MongooseModule } from '@nestjs/mongoose'
 import { AuditModule } from '../audit/audit.module.js'
 import { AuthModule } from '../auth/auth.module.js'
+import { CategoriesModule } from '../categories/categories.module.js'
 import { InventoryModule } from '../inventory/inventory.module.js'
 import { MediaAssetsModule } from '../media-assets/media-assets.module.js'
 import { AdminProductsController } from './admin-products.controller.js'
@@ -18,6 +19,7 @@ import { Product, ProductSchema } from './schemas/product.schema.js'
     MediaAssetsModule,
     AuditModule,
     AuthModule,
+    CategoriesModule,
   ],
   controllers: [ProductsController, AdminProductsController],
   providers: [ProductsService, ProductCatalogService, ProductsRepository],
