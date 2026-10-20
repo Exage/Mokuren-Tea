@@ -85,11 +85,52 @@ export class ProductsRepository {
     return counts
   }
 
-  countTasteNotes(ids: Types.ObjectId[], session: ClientSession) {
-    return (
-      this.connection.db
-        ?.collection('tastenotes')
-        .countDocuments({ _id: { $in: ids } }, { session }) || 0
+  findPublishedTasteNoteIds() {
+    return this.productModel.distinct('tasteNoteIds', {
+      status: 'published',
+      'tasteNoteIds.0': { $exists: true },
+    })
+  }
+
+  countProductsByTasteNote(tasteNoteId: Types.ObjectId, session?: ClientSession) {
+    return this.productModel
+      .countDocuments({ tasteNoteIds: tasteNoteId })
+      .session(session || null)
+      .exec()
+  }
+
+  async countProductsByTasteNotes(
+    ids: Types.ObjectId[],
+    session?: ClientSession
+  ): Promise<Map<string, number>> {
+    if (ids.length === 0) {
+      return new Map()
+    }
+
+    const rows = await this.productModel
+      .aggregate([
+        { $match: { tasteNoteIds: { $in: ids } } },
+        { $unwind: '$tasteNoteIds' },
+        { $match: { tasteNoteIds: { $in: ids } } },
+        { $group: { _id: '$tasteNoteIds', count: { $sum: 1 } } },
+      ])
+      .session(session || null)
+      .exec()
+
+    const counts = new Map<string, number>()
+
+    for (const row of rows) {
+      counts.set(String(row._id), row.count)
+    }
+
+    return counts
+  }
+
+  unbindTasteNoteFromAllProducts(tasteNoteId: Types.ObjectId, session: ClientSession) {
+    return this.productModel.updateMany(
+      { tasteNoteIds: tasteNoteId },
+      { $pull: { tasteNoteIds: tasteNoteId } },
+      { session }
     )
   }
 

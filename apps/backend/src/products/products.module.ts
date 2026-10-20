@@ -11,6 +11,7 @@ import { ProductCatalogService } from './product-catalog.service.js'
 import { ProductsController } from './products.controller.js'
 import { ProductsService } from './products.service.js'
 import { Product, ProductSchema } from './schemas/product.schema.js'
+import { TasteNotesModule } from '../taste-notes/taste-notes.module.js'
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { Product, ProductSchema } from './schemas/product.schema.js'
     AuditModule,
     AuthModule,
     CategoriesModule,
+    TasteNotesModule,
   ],
   controllers: [ProductsController, AdminProductsController],
   providers: [ProductsService, ProductCatalogService, ProductsRepository],

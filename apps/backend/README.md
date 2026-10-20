@@ -230,6 +230,60 @@ db.categories.createIndex({ slug: 1 }, { unique: true })
 db.categories.createIndex({ sortOrder: 1, _id: 1 })
 ```
 
+## Taste notes
+
+`GET /api/taste-notes` returns `{ items }` containing only notes referenced by
+published products, including products without available stock. Items contain
+`id`, `name`, `slug`, and `sortOrder`. Catalog taste filters retain AND semantics.
+
+All `/api/admin/taste-notes` routes require an active admin session:
+
+```text
+GET    /api/admin/taste-notes             paginated (?search, ?page, ?limit)
+POST   /api/admin/taste-notes             { name, slug, sortOrder? }
+PATCH  /api/admin/taste-notes/:id         { name?, slug?, sortOrder? }
+GET    /api/admin/taste-notes/:id/usages  { productsCount }
+DELETE /api/admin/taste-notes/:id         { deletedTasteNoteId, affectedProductsCount }
+```
+
+Slugs are trimmed, lowercased, and unique. Names need not be unique. Renaming
+does not change the slug. Deletion removes the ID from products of every status
+in the same transaction as the note deletion and audit event. Product bindings
+and deletion acquire reference writes on the same note to prevent dangling links.
+
+### Existing data and production rollout
+
+Stop application writes before migration. Build, then run these commands from
+`apps/backend` before enabling the new API against an existing database:
+
+```sh
+node dist/taste-notes/taste-notes-migration.cli.js report
+node dist/taste-notes/taste-notes-migration.cli.js backfill
+node dist/taste-notes/taste-notes-migration.cli.js report
+```
+
+The CLI loads this directory's `.env` even from another working directory;
+process environment values take precedence. It connects without application
+models, automatic indexes, or automatic collection creation. `report` is
+read-only and identifies missing/invalid technical fields, invalid names/slugs,
+normalization collisions, and product references to absent notes.
+
+`backfill` fills only null/missing `createdAt`, `updatedAt`, `sortOrder`, and
+`referenceRevision`. It preserves existing values and product links, and is
+safe to repeat. Filled timestamps represent migration time, not known original
+creation dates. Invalid non-null values and business-data conflicts are reported
+for explicit correction rather than overwritten. Resolve every reported issue
+before enabling the API; absent/invalid timestamps return
+`503 TASTE_NOTES_MIGRATION_REQUIRED` until corrected.
+
+After resolving slug normalization and collisions, create and verify these
+indexes before accepting writes in production (`autoIndex` is disabled):
+
+```js
+db.tastenotes.createIndex({ slug: 1 }, { unique: true })
+db.tastenotes.createIndex({ sortOrder: 1, _id: 1 })
+```
+
 Add business modules and Mongoose schemas when their requirements are defined.
 In production, supply deployment environment variables and use an authenticated
 MongoDB service. Automatic index creation is disabled in production; manage indexes

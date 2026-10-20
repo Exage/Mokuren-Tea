@@ -15,6 +15,7 @@ import {
   Query,
   UploadedFile,
   UseFilters,
+  UseGuards,
   UseInterceptors,
   ArgumentsHost,
   BadRequestException,
@@ -30,6 +31,7 @@ import {
   ApiBody,
 } from '@nestjs/swagger'
 import { CurrentAdmin } from '../auth/current-admin.decorator.js'
+import { AdminAuthGuard } from '../auth/admin-auth.guard.js'
 import { MAX_UPLOAD_BYTES, MediaAssetsService } from './media-assets.service.js'
 import { MediaAssetsQueryDto } from './dto/media-assets-query.dto.js'
 import {
@@ -84,11 +86,9 @@ interface MulterFile {
 }
 
 // Administrative media library. Upload accepts exactly one file via multipart/form-data.
-// AdminAuthGuard remains disabled in this checkout; enabling it also requires
-// importing UseGuards and AdminAuthGuard.
 @ApiTags('admin-media-assets')
 @Controller('admin/media-assets')
-// @UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard)
 @UseFilters(MediaUploadErrorFilter)
 export class AdminMediaAssetsController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) {}

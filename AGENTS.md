@@ -13,6 +13,11 @@ This block is written and re-added by `turbo` before repository-scoped commands 
 
 These rules apply to application code and shared packages throughout this monorepo.
 
+## Git actions
+
+- Create Git commits only when the user explicitly requests a commit.
+- Push to a remote repository only when the user explicitly requests a push. A request to commit does not authorize a push, and a request to push does not authorize creating a commit.
+
 ## Code organization
 
 - Prefer clear, direct code over unnecessary abstraction.

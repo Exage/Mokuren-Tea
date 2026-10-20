@@ -113,13 +113,12 @@ The service can apply business changes to a document and pass it to the reposito
 for saving. This is a persistence boundary, not a database-independent domain
 model; avoid additional model copies solely to hide Mongoose.
 
-Products currently reads the taste-note reference collection through its
-repository. Media assets reads product references there for usage checks and
-maintenance. Categories are read through the exported CategoriesService, and
-product category bindings are protected by the reference-lock protocol. These
-existing cross-collection queries are explicit exceptions; when those feature
-boundaries grow, expose the necessary operations through services rather than
-importing another module's repository.
+Products reads categories and taste notes through the exported CategoriesService
+and TasteNotesService. Both bindings use the reference-lock protocol to prevent
+links to records deleted concurrently. Management modules coordinate deletion
+through the feature services without circular imports. Media assets still reads
+product references in its repository for usage checks and maintenance; this is
+an explicit exception. Do not import another module's repository.
 
 ## Types and interfaces
 

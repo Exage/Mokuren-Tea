@@ -13,6 +13,7 @@ import { AuditService } from '../audit/audit.service.js'
 import { CategoriesService } from '../categories/categories.service.js'
 import { InventoryService } from '../inventory/inventory.service.js'
 import { MediaAssetsService } from '../media-assets/media-assets.service.js'
+import { TasteNotesService } from '../taste-notes/taste-notes.service.js'
 import { AdminProductsQueryDto } from './dto/admin-products-query.dto.js'
 import { CreateProductDto } from './dto/create-product.dto.js'
 import { CreateProductVariantDto } from './dto/create-product-variant.dto.js'
@@ -70,6 +71,21 @@ function assertNoDuplicateImageIds(imageIds: string[]): void {
   }
 }
 
+function assertNoDuplicateTasteNoteIds(tasteNoteIds: string[]): void {
+  const seen = new Set<string>()
+
+  for (const id of tasteNoteIds) {
+    if (seen.has(id)) {
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'Duplicate tasteNoteIds are not allowed',
+      })
+    }
+
+    seen.add(id)
+  }
+}
+
 function toImageIdStrings(imageIds: unknown[]): string[] {
   return imageIds.map((id) => String(id))
 }
@@ -111,6 +127,7 @@ export class ProductsService {
     private readonly categoriesService: CategoriesService,
     private readonly inventoryService: InventoryService,
     private readonly mediaAssetsService: MediaAssetsService,
+    private readonly tasteNotesService: TasteNotesService,
     private readonly auditService: AuditService,
     @InjectConnection() private readonly connection: Connection
   ) {}
@@ -178,15 +195,21 @@ export class ProductsService {
     }
 
     if (input.tasteNoteIds && input.tasteNoteIds.length > 0) {
-      const ids = input.tasteNoteIds.map((id) => toObjectId(id, 'tasteNoteIds'))
-      const count = await this.productsRepository.countTasteNotes(ids, session)
+      assertNoDuplicateTasteNoteIds(input.tasteNoteIds)
 
-      if (count !== ids.length) {
+      const ids = input.tasteNoteIds.map((id) => toObjectId(id, 'tasteNoteIds'))
+      const found = await this.tasteNotesService.findByIds(ids, session)
+
+      if (found.length !== ids.length) {
         throw new NotFoundException({
           code: 'NOT_FOUND',
           message: 'One or more taste notes do not exist',
         })
       }
+
+      // Protect the taste-note bindings so a concurrent deletion cannot remove
+      // a taste note while this product references it.
+      await this.tasteNotesService.lockReferences(input.tasteNoteIds, session)
     }
 
     if (input.imageIds && input.imageIds.length > 0) {
@@ -747,5 +770,39 @@ export class ProductsService {
   async countProductsByCategories(categoryIds: string[], session?: ClientSession): Promise<Map<string, number>> {
     const ids = categoryIds.map((id) => toObjectId(id, 'categoryId'))
     return this.productsRepository.countProductsByCategories(ids, session)
+  }
+
+  async findPublishedTasteNoteIds(): Promise<string[]> {
+    const ids = await this.productsRepository.findPublishedTasteNoteIds()
+    return ids.map((id) => String(id))
+  }
+
+  async countProductsByTasteNote(
+    tasteNoteId: string,
+    session?: ClientSession
+  ): Promise<number> {
+    const id = toObjectId(tasteNoteId, 'tasteNoteId')
+    return this.productsRepository.countProductsByTasteNote(id, session)
+  }
+
+  async countProductsByTasteNotes(
+    tasteNoteIds: string[],
+    session?: ClientSession
+  ): Promise<Map<string, number>> {
+    const ids = tasteNoteIds.map((id) => toObjectId(id, 'tasteNoteId'))
+    return this.productsRepository.countProductsByTasteNotes(ids, session)
+  }
+
+  async unbindTasteNoteFromAllProducts(
+    tasteNoteId: string,
+    session: ClientSession
+  ): Promise<{ matched: number; modified: number }> {
+    const id = toObjectId(tasteNoteId, 'tasteNoteId')
+    const result = await this.productsRepository.unbindTasteNoteFromAllProducts(id, session)
+
+    return {
+      matched: result.matchedCount,
+      modified: result.modifiedCount,
+    }
   }
 }

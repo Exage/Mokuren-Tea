@@ -7,6 +7,7 @@ import { HealthController } from './health/health.controller.js'
 import { MediaAssetsModule } from './media-assets/media-assets.module.js'
 import { ProductsModule } from './products/products.module.js'
 import { CategoryManagementModule } from './categories/category-management.module.js'
+import { TasteNoteManagementModule } from './taste-notes/taste-note-management.module.js'
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CategoryManagementModule } from './categories/category-management.modul
     ProductsModule,
     MediaAssetsModule,
     CategoryManagementModule,
+    TasteNoteManagementModule,
   ],
   controllers: [HealthController],
 })
