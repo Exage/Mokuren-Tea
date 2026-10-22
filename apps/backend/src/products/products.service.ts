@@ -1,3 +1,4 @@
+import { CmsReferencesService } from '../cms/cms-references.service.js'
 import { ProductsRepository } from './products.repository.js'
 import {
   BadRequestException,
@@ -124,6 +125,7 @@ function assertUniqueVariantWeights(variants: StoredVariant[]): void {
 export class ProductsService {
   constructor(
     private readonly productsRepository: ProductsRepository,
+    private readonly cmsReferencesService: CmsReferencesService,
     private readonly categoriesService: CategoriesService,
     private readonly inventoryService: InventoryService,
     private readonly mediaAssetsService: MediaAssetsService,
@@ -131,6 +133,14 @@ export class ProductsService {
     private readonly auditService: AuditService,
     @InjectConnection() private readonly connection: Connection
   ) {}
+
+  async lockPublishedForFeature(id: string, session: ClientSession): Promise<boolean> {
+    const locked = await this.productsRepository.lockPublishedForFeature(
+      toObjectId(id, 'productId'),
+      session
+    )
+    return Boolean(locked)
+  }
 
   private async runInTransaction<T>(work: (session: ClientSession) => Promise<T>): Promise<T> {
     const session = await this.connection.startSession()
@@ -276,6 +286,7 @@ export class ProductsService {
               imageIds: (dto.imageIds || []).map((id) => new Types.ObjectId(id)),
               variants,
               status: 'draft',
+              referenceRevision: 0,
               firstPublishedAt: null,
               lastPublishedAt: null,
               lowStockThresholdGrams: dto.lowStockThresholdGrams || 0,
@@ -709,6 +720,17 @@ export class ProductsService {
         return String(product._id)
       }
 
+      const featured = await this.cmsReferencesService.hasPublishedProduct(
+        String(product._id),
+        session
+      )
+      if (featured) {
+        throw new ConflictException({
+          code: 'PRODUCT_FEATURED_IN_CMS',
+          message: 'Remove this product from the published featured teas before archiving it',
+        })
+      }
+
       product.status = 'archived'
       await this.productsRepository.save(product, session)
       await this.auditService.record(
@@ -755,11 +777,7 @@ export class ProductsService {
       return { matched: 0, modified: 0 }
     }
 
-    const result = await this.productsRepository.reassignProductsByCategory(
-      source,
-      target,
-      session
-    )
+    const result = await this.productsRepository.reassignProductsByCategory(source, target, session)
 
     return {
       matched: result.matchedCount,
@@ -767,7 +785,10 @@ export class ProductsService {
     }
   }
 
-  async countProductsByCategories(categoryIds: string[], session?: ClientSession): Promise<Map<string, number>> {
+  async countProductsByCategories(
+    categoryIds: string[],
+    session?: ClientSession
+  ): Promise<Map<string, number>> {
     const ids = categoryIds.map((id) => toObjectId(id, 'categoryId'))
     return this.productsRepository.countProductsByCategories(ids, session)
   }
@@ -777,10 +798,7 @@ export class ProductsService {
     return ids.map((id) => String(id))
   }
 
-  async countProductsByTasteNote(
-    tasteNoteId: string,
-    session?: ClientSession
-  ): Promise<number> {
+  async countProductsByTasteNote(tasteNoteId: string, session?: ClientSession): Promise<number> {
     const id = toObjectId(tasteNoteId, 'tasteNoteId')
     return this.productsRepository.countProductsByTasteNote(id, session)
   }

@@ -120,6 +120,16 @@ through the feature services without circular imports. Media assets still reads
 product references in its repository for usage checks and maintenance; this is
 an explicit exception. Do not import another module's repository.
 
+Dashboard composes `ProductCatalogService.getStockOverview()` and
+`ReservationsService.getActiveOverview()`; the owning features perform their
+own queries. Product archiving checks CMS bindings through `CmsReferencesService`.
+Its small `CmsReferencesModule` has no product dependency, so the editorial CMS
+module can still validate product publication without a circular import.
+
+The category migration and database index commands keep persistence in their
+feature-specific services. These services are constructed by the CLI; they do
+not require an additional HTTP controller or application module.
+
 ## Types and interfaces
 
 Put contracts shared by multiple implementation files in `<feature>.types.ts`.
@@ -197,3 +207,6 @@ uploads and deletions. Preserve this order when reorganizing code.
 The tests import compiled files, so build before running them. Integration tests
 use a real in-memory MongoDB replica set and replace Cloudinary with a test
 provider; they validate API behavior and persistence, not live Cloudinary calls.
+Type checking also rejects unused local declarations, parameters, and private
+fields. For exported methods, verify actual callers before deleting them:
+decorated HTTP handlers and dynamically selected CLI commands are entry points.

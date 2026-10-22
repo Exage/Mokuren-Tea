@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AdminAuthGuard } from '../auth/admin-auth.guard.js'
+import { CsrfGuard } from '../auth/csrf.guard.js'
 import { CurrentAdmin } from '../auth/current-admin.decorator.js'
 import {
   AdminTasteNoteListResponse,
@@ -29,9 +30,10 @@ import { TasteNoteManagementService } from './taste-note-management.service.js'
 // Administrative taste-note management. The class-level guard ensures every
 // method here is authenticated; the controller only resolves the actor and
 // delegates rules, transactions and audit to TasteNoteManagementService and
-// TasteNotesService.
+// TasteNotesService. Mutating routes additionally require a CSRF token
+// because they are cookie-session-authenticated.
 @ApiTags('admin-taste-notes')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, CsrfGuard)
 @Controller('admin/taste-notes')
 export class AdminTasteNotesController {
   constructor(

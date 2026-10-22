@@ -4,10 +4,17 @@ import { MongooseModule } from '@nestjs/mongoose'
 import { fileURLToPath } from 'node:url'
 import { validateEnvironment } from './config/environment.js'
 import { HealthController } from './health/health.controller.js'
+import { AuthModule } from './auth/auth.module.js'
 import { MediaAssetsModule } from './media-assets/media-assets.module.js'
 import { ProductsModule } from './products/products.module.js'
 import { CategoryManagementModule } from './categories/category-management.module.js'
 import { TasteNoteManagementModule } from './taste-notes/taste-note-management.module.js'
+import { InventoryMovementsModule } from './inventory-movements/inventory-movements.module.js'
+import { IdempotencyModule } from './idempotency/idempotency.module.js'
+import { ReservationsModule } from './reservations/reservations.module.js'
+import { CmsModule } from './cms/cms.module.js'
+import { StoreSettingsModule } from './store-settings/store-settings.module.js'
+import { DashboardModule } from './dashboard/dashboard.module.js'
 
 @Module({
   imports: [
@@ -31,6 +38,13 @@ import { TasteNoteManagementModule } from './taste-notes/taste-note-management.m
     MediaAssetsModule,
     CategoryManagementModule,
     TasteNoteManagementModule,
+    AuthModule,
+    InventoryMovementsModule,
+    IdempotencyModule,
+    ReservationsModule,
+    CmsModule,
+    StoreSettingsModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
 })

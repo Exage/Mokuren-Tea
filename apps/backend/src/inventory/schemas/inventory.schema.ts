@@ -1,12 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Types } from 'mongoose'
-import type { HydratedDocument } from 'mongoose'
 
-export type InventoryDocument = HydratedDocument<Inventory>
-
-// Single stock record per product. Receipts, write-offs and reservations
-// arrive later in the inventory module; this stage only creates zero stock
-// and reads current grams.
+// Stock is shared by all pack sizes of one product.
 @Schema({ timestamps: { createdAt: false, updatedAt: true } })
 export class Inventory {
   @Prop({ type: Types.ObjectId, required: true })

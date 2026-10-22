@@ -1,5 +1,4 @@
 import 'reflect-metadata'
-import { ValidationPipe } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { getConnectionToken } from '@nestjs/mongoose'
 import { Test } from '@nestjs/testing'
@@ -7,6 +6,8 @@ import { MongoMemoryReplSet } from 'mongodb-memory-server'
 import { createHash, randomBytes } from 'node:crypto'
 import { Types } from 'mongoose'
 import { AppModule } from '../../dist/app.module.js'
+import { corsOptions } from '../../dist/config/cors.js'
+import { requestValidationPipe } from '../../dist/config/request-validation.js'
 
 export function hashToken(token) {
   return createHash('sha256').update(token, 'utf8').digest('hex')
@@ -33,12 +34,25 @@ export async function startTestApp(databaseName, overrides = {}) {
       throw new Error(`Unexpected config key ${key}`)
     },
     get: (key) => {
+      if (Object.hasOwn(overrides.config || {}, key)) {
+        return overrides.config[key]
+      }
       if (key === 'NODE_ENV') {
         return 'test'
       }
 
       if (key === 'MONGODB_URI') {
         return mongoUri
+      }
+
+      // Rate limits are deliberately generous in tests so the suite does not
+      // trip them across many sequential requests from localhost.
+      if (key === 'RATE_LIMIT_MAX') {
+        return '10000'
+      }
+
+      if (key === 'RATE_LIMIT_WINDOW_MS') {
+        return '60000'
       }
 
       return undefined
@@ -56,18 +70,15 @@ export async function startTestApp(databaseName, overrides = {}) {
 
   const moduleRef = await testingModule.compile()
   const app = moduleRef.createNestApplication({ logger: false })
+  app.enableCors(corsOptions(configStub))
   app.setGlobalPrefix('api')
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: { enableImplicitConversion: false },
-    }),
-  )
+  app.useGlobalPipes(requestValidationPipe())
   await app.init()
 
   const connection = app.get(getConnectionToken())
+  // Mongoose can finish building indexes after app.init(). Wait here so
+  // concurrency tests never run before unique constraints become active.
+  await Promise.all(connection.modelNames().map((name) => connection.model(name).init()))
 
   return { app, replSet, connection, db: connection.db }
 }
@@ -127,11 +138,16 @@ export async function seedReferences(db) {
 
 export async function createAdmin(db, options = {}) {
   const adminId = new Types.ObjectId()
+  const email = `admin-${String(adminId)}@example.com`
+  const normalizedEmail = email.toLowerCase()
   const token = randomBytes(32).toString('hex')
 
   await db.collection('adminusers').insertOne({
     _id: adminId,
-    username: `admin-${adminId}`,
+    email,
+    normalizedEmail,
+    displayName: `Administrator ${String(adminId).slice(0, 6)}`,
+    passwordHash: 'stub-hash',
     isActive: options.isActive ?? true,
     mustChangePassword: options.mustChangePassword || false,
   })

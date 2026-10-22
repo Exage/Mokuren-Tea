@@ -1,8 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
 import { Schema as MongooseSchema, Types } from 'mongoose'
-import type { HydratedDocument } from 'mongoose'
-
-export type ProductVariantDocument = HydratedDocument<ProductVariant>
 
 // Embedded pack size stored inside the product document. Variants are never
 // physically deleted through the API; disabling is used instead.

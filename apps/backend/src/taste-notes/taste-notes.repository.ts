@@ -21,7 +21,10 @@ export class TasteNotesRepository {
   }
 
   findById(id: Types.ObjectId, session?: ClientSession) {
-    return this.tasteNoteModel.findById(id).session(session || null).exec()
+    return this.tasteNoteModel
+      .findById(id)
+      .session(session || null)
+      .exec()
   }
 
   findByIds(ids: Types.ObjectId[], session?: ClientSession) {
@@ -66,14 +69,12 @@ export class TasteNotesRepository {
   }
 
   incrementReferenceRevision(id: Types.ObjectId, session: ClientSession) {
-    return this.tasteNoteModel.updateOne(
-      { _id: id },
-      { $inc: { referenceRevision: 1 } },
-      { session, timestamps: false }
-    )
+    return this.tasteNoteModel
+      .updateOne({ _id: id }, { $inc: { referenceRevision: 1 } }, { session, timestamps: false })
+      .exec()
   }
 
   deleteById(id: Types.ObjectId, session: ClientSession) {
-    return this.tasteNoteModel.deleteOne({ _id: id }, { session })
+    return this.tasteNoteModel.deleteOne({ _id: id }, { session }).exec()
   }
 }

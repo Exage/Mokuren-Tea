@@ -292,7 +292,7 @@ export class MediaAssetsService {
     const products = await this.mediaAssetsRepository.findProductUsages(objectId)
 
     return products.map((product) => ({
-      id: String(product._id),
+      id: product.id,
       name: typeof product.name === 'string' ? product.name : '',
       slug: typeof product.slug === 'string' ? product.slug : '',
       status: typeof product.status === 'string' ? product.status : '',

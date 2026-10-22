@@ -49,6 +49,11 @@ For MongoDB Atlas or another existing replica set, skip `db:up` and set
 | `CLOUDINARY_API_KEY`      | Required in production | Cloudinary API key (server-side only)                                                |
 | `CLOUDINARY_API_SECRET`   | Required in production | Cloudinary API secret (never exposed to clients or logs)                             |
 | `CLOUDINARY_ASSET_FOLDER` | Required in production | Existing Cloudinary folder (Dynamic folders `asset_folder`) where uploads are placed |
+| `SESSION_COOKIE_NAME`    | `admin_session`        | HttpOnly admin session cookie                                                        |
+| `CSRF_TOKEN_NAME`        | `csrf_token`           | Cookie echoed in `X-CSRF-Token` for cookie-authenticated mutations                   |
+| `CORS_ORIGINS`           | Empty                  | Comma-separated exact frontend origins                                              |
+| `RATE_LIMIT_MAX`         | `30`                   | Requests per route and IP in one fixed window                                        |
+| `RATE_LIMIT_WINDOW_MS`   | `60000`                | Rate limit window in milliseconds                                                    |
 
 The application loads `.env` from this directory, including when launched from a
 different working directory. Process environment variables take precedence.
@@ -67,6 +72,10 @@ pnpm --filter @mokuren/backend start
 pnpm lint
 pnpm typecheck
 pnpm --filter @mokuren/backend test:integration
+pnpm --filter @mokuren/backend admin:create
+pnpm --filter @mokuren/backend indexes:report
+pnpm --filter @mokuren/backend indexes:ensure
+pnpm --filter @mokuren/backend content:initialize
 pnpm --filter @mokuren/backend db:status
 pnpm --filter @mokuren/backend db:down
 ```
@@ -100,15 +109,21 @@ naming, responsibility boundaries, shared types, and new-module workflow.
 ```text
 src/
   main.ts                       HTTP bootstrap, validation, Swagger, shutdown hooks
-  app.module.ts                 Configuration, MongoDB connection, ProductsModule
+  app.module.ts                 Configuration, MongoDB connection, feature modules
   config/environment.ts         Environment validation
   health/health.controller.ts    API and database readiness
-  auth/                         Minimal real admin session guard (MongoDB-backed)
-  audit/                        Append-only audit log written in shared transactions
+  auth/                         Admin accounts and MongoDB-backed sessions
+  audit/                        Append-only log and protected paginated reads
   categories/                   Category schema, service, repository, and admin/public routes
   products/                     Product cards, variants, publication, public catalog
-  inventory/                    Zero-stock creation and stock reads for products
-  media-assets/                 Cloudinary image library, product bindings, deletion
+  inventory/                    Stock records and conditional gram updates
+  inventory-movements/          Receipts, write-offs, adjustments and correction history
+  idempotency/                  Request keys and replayed results
+  reservations/                 Requests, events, numbers and stock transitions
+  cms/                          Fixed content blocks, drafts and revisions
+  store-settings/               Singleton store contact and location settings
+  dashboard/                    Live reservation and stock overview
+  media-assets/                 Cloudinary image library, product/CMS bindings, deletion
 test/
   category-slug.test.mjs        Slug/name normalization and sortOrder validation (no MongoDB)
   category-mapper.test.mjs      Public and admin category projections (no MongoDB)
@@ -202,7 +217,7 @@ Service commands (run `build` first):
 
 ```sh
 pnpm --filter @mokuren/backend reconcile:media   # adopt or fail stuck uploading, finish deleting
-pnpm --filter @mokuren/backend recount:media-usage  # one-time usageCount recount from Product.imageIds
+pnpm --filter @mokuren/backend recount:media-usage  # recount product and CMS image usage
 node dist/categories/categories-migration.cli.js   # read-only pre-migration report
 node dist/categories/categories-migration.cli.js backfill   # backfill legacy category technical fields
 ```
@@ -284,9 +299,139 @@ db.tastenotes.createIndex({ slug: 1 }, { unique: true })
 db.tastenotes.createIndex({ sortOrder: 1, _id: 1 })
 ```
 
-Add business modules and Mongoose schemas when their requirements are defined.
-In production, supply deployment environment variables and use an authenticated
-MongoDB service. Automatic index creation is disabled in production; manage indexes
-explicitly when introducing schemas.
+## Inventory and reservations
+
+One inventory record belongs to each product, not each pack size. All stock
+amounts are integer grams. `physicalGrams >= reservedGrams >= 0` is enforced by
+conditional updates. Each change creates an immutable movement in the same
+transaction. A manual adjustment sets the **target physical grams** and must
+not reduce them below the reserved amount. Manual operations require a reason.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/inventory/:productId/stock` | Exact physical, reserved and available grams |
+| GET | `/api/admin/inventory/movements` | Paginated movement history; filter by product, type, reservation, correction or date |
+| POST | `/api/admin/inventory/receipt` | `{ productId, grams, reason }` |
+| POST | `/api/admin/inventory/write-off` | `{ productId, grams, reason }`, free stock only |
+| POST | `/api/admin/inventory/adjust` | `{ productId, targetPhysicalGrams, reason }` |
+| POST | `/api/admin/inventory/compensate` | `{ movementId, reason }` |
+
+Stock-mutating routes accept an optional `Idempotency-Key` header. A completed
+request with the same key and body replays its saved result; a changed body
+returns `409 IDEMPOTENCY_CONFLICT`. A concurrent duplicate can return
+`409 IDEMPOTENCY_IN_FLIGHT` and should be retried after the first finishes.
+Keys expire after 24 hours. Reservation-linked reserve and release movements
+must be changed through the reservation lifecycle; compensation of a completed
+movement restores physical stock without reopening the finished reservation.
+Keys must contain 8–200 visible ASCII characters. The in-flight and completed
+states are stored in MongoDB, so retries remain safe across backend instances.
+
+Public requests use `POST /api/public/reservations` with `source: "website"`,
+`customerName`, `customerPhone`, and `lines: [{ productId, variantId, quantity }]`.
+Clients should send a unique `Idempotency-Key` for each submission. New requests
+check availability but do not reserve stock. A reservation number and immutable
+name, weight and price snapshots are stored. Money is calculated in integer
+cents and stored as MongoDB Decimal128; API totals are ordinary JSON numbers.
+The public form and admin login have independent per-route, per-IP rate limits.
+The limiter is in-process; multi-instance deployments need a shared limiter to
+enforce one global request budget.
+
+Admin routes require an active session; mutations also require CSRF protection
+for cookie sessions:
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| POST | `/api/admin/reservations` | Create a new request on behalf of a customer |
+| GET | `/api/admin/reservations` | Paginated list with status, source, customer and date filters |
+| GET | `/api/admin/reservations/:id` | Reservation and snapshots |
+| PATCH | `/api/admin/reservations/:id` | Edit a `new` request |
+| GET | `/api/admin/reservations/:id/events` | Event history |
+| POST | `/api/admin/reservations/:id/confirm` | Reserve snapshot grams |
+| POST | `/api/admin/reservations/:id/ready` | Mark ready without stock change |
+| POST | `/api/admin/reservations/:id/complete` | Decrease physical and reserved grams |
+| POST | `/api/admin/reservations/:id/cancel` | Release reserve; `ready` requires `{ teaReturned: true }` |
+
+Allowed transitions are `new → confirmed → ready → completed`, plus cancellation
+from `new`, `confirmed`, or `ready`. Completed and cancelled requests are final.
+At confirmation stock is checked again; `409 INSUFFICIENT_STOCK` leaves the
+request and all product reserves unchanged. Changes to a product never alter
+the saved price or weight of an existing reservation. Editing a line's quantity
+uses its current price; an unchanged line keeps its saved price.
+
+## CMS, media, settings, audit and dashboard
+
+The CMS supports only `home.hero`, `home.testimonials`, `home.featuredTeas`,
+`home.visitStore`, `catalog.header`, `about.content`, and `contacts.content`.
+Each block has one shared draft and a separately published value. The draft
+write requires `expectedDraftVersion`; a stale value returns
+`409 STALE_VERSION`. Publishing one block writes a permanent revision.
+Restoring a revision changes the draft only. Featured teas reference 1–4
+published products by ID; a featured product must be removed from the
+published block before it can be archived.
+
+Public published-only reads:
+
+```text
+GET /api/public/cms/pages/:pageKey
+GET /api/public/cms/pages/:pageKey/blocks/:blockKey
+GET /api/public/store-settings
+```
+
+Protected editorial routes:
+
+```text
+GET   /api/admin/cms/blocks
+GET   /api/admin/cms/blocks/:pageKey/:blockKey
+PATCH /api/admin/cms/blocks/:pageKey/:blockKey/draft
+POST  /api/admin/cms/blocks/:pageKey/:blockKey/publish
+GET   /api/admin/cms/blocks/:pageKey/:blockKey/revisions
+POST  /api/admin/cms/blocks/:pageKey/:blockKey/revisions/:revisionId/restore
+GET   /api/admin/cms/preview/:pageKey/:blockKey
+GET   /api/admin/store-settings
+PATCH /api/admin/store-settings
+GET   /api/admin/audit
+GET   /api/admin/dashboard
+```
+
+CMS content uses validated plain text and media asset IDs. Image deletion
+checks product cards, CMS drafts, published blocks and old revisions. The media
+usage recount covers all of them. Audit reads are paginated and filtered by
+actor, action, entity and date. Dashboard calculates live status and stock
+counts and is available only to admins.
+
+## Existing-database rollout
+
+Build first. Stop writes before index creation or media usage recount. Use an
+authenticated transaction-capable MongoDB replica set in production.
+
+```sh
+pnpm --filter @mokuren/backend indexes:report
+pnpm --filter @mokuren/backend indexes:ensure
+pnpm --filter @mokuren/backend content:initialize
+pnpm --filter @mokuren/backend recount:media-usage
+```
+
+`indexes:report` is read-only. It reports duplicate values that would prevent
+unique indexes and counts nonzero inventory records with no movement history.
+Resolve duplicates before `indexes:ensure`. The latter explicitly creates the
+indexes for the new collections because production disables automatic index
+creation. `content:initialize` creates the seven fixed CMS block records and
+the `Mokuren Tea` store settings document. It can be repeated without
+overwriting admin edits. It does not publish placeholder content or invent
+stock movements. If existing nonzero stock lacks movements, preserve it and
+record the known opening balance separately before relying on movement history.
+
+All new routes and request DTOs are visible in Swagger at `/api/docs` when the
+API is running. Integration tests need a local MongoDB replica set and use an
+in-memory one by default.
+
+Validation failures return `400 VALIDATION_ERROR` with a `details` array of
+fields and messages. Auth failures return `401 UNAUTHORIZED`; cookie session
+mutations also require a CSRF token. Domain conflicts return `409` with a
+specific code such as `INSUFFICIENT_STOCK`, `INVALID_STATUS_TRANSITION`,
+`STALE_VERSION`, `MEDIA_ASSET_IN_USE`, `IDEMPOTENCY_CONFLICT`, or
+`IDEMPOTENCY_IN_FLIGHT`. Exceeding the public form or login limit returns
+`429 RATE_LIMITED`. Swagger documents the success and error status codes for
+the new reservation, stock, CMS, settings, audit, and dashboard routes.
 
 Integration reference: [NestJS MongoDB documentation](https://docs.nestjs.com/techniques/mongodb).

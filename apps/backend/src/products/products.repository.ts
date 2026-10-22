@@ -37,15 +37,30 @@ export class ProductsRepository {
     return product.save({ session })
   }
 
+  lockPublishedForFeature(id: Types.ObjectId, session: ClientSession) {
+    return this.productModel
+      .findOneAndUpdate(
+        { _id: id, status: 'published' },
+        { $inc: { referenceRevision: 1 } },
+        { session, returnDocument: 'after' }
+      )
+      .exec()
+  }
+
   countProductsByCategory(categoryId: Types.ObjectId, session?: ClientSession) {
-    return this.productModel.countDocuments({ categoryId }).session(session || null).exec()
+    return this.productModel
+      .countDocuments({ categoryId })
+      .session(session || null)
+      .exec()
   }
 
   findPublishedCategoryIds() {
-    return this.productModel.distinct('categoryId', {
-      status: 'published',
-      categoryId: { $exists: true, $ne: null },
-    })
+    return this.productModel
+      .distinct('categoryId', {
+        status: 'published',
+        categoryId: { $exists: true, $ne: null },
+      })
+      .exec()
   }
 
   reassignProductsByCategory(
@@ -53,11 +68,13 @@ export class ProductsRepository {
     targetCategoryId: Types.ObjectId,
     session: ClientSession
   ) {
-    return this.productModel.updateMany(
-      { categoryId: sourceCategoryId },
-      { $set: { categoryId: targetCategoryId } },
-      { session }
-    )
+    return this.productModel
+      .updateMany(
+        { categoryId: sourceCategoryId },
+        { $set: { categoryId: targetCategoryId } },
+        { session }
+      )
+      .exec()
   }
 
   async countProductsByCategories(
@@ -86,10 +103,12 @@ export class ProductsRepository {
   }
 
   findPublishedTasteNoteIds() {
-    return this.productModel.distinct('tasteNoteIds', {
-      status: 'published',
-      'tasteNoteIds.0': { $exists: true },
-    })
+    return this.productModel
+      .distinct('tasteNoteIds', {
+        status: 'published',
+        'tasteNoteIds.0': { $exists: true },
+      })
+      .exec()
   }
 
   countProductsByTasteNote(tasteNoteId: Types.ObjectId, session?: ClientSession) {
@@ -127,11 +146,21 @@ export class ProductsRepository {
   }
 
   unbindTasteNoteFromAllProducts(tasteNoteId: Types.ObjectId, session: ClientSession) {
-    return this.productModel.updateMany(
-      { tasteNoteIds: tasteNoteId },
-      { $pull: { tasteNoteIds: tasteNoteId } },
-      { session }
-    )
+    return this.productModel
+      .updateMany(
+        { tasteNoteIds: tasteNoteId },
+        { $pull: { tasteNoteIds: tasteNoteId } },
+        { session }
+      )
+      .exec()
+  }
+
+  findPublishedForStockOverview() {
+    return this.productModel
+      .find({ status: 'published' })
+      .select({ name: 1, variants: 1, lowStockThresholdGrams: 1 })
+      .lean()
+      .exec()
   }
 
   findPublishedBySlug(slug: string) {

@@ -1,7 +1,4 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose'
-import type { HydratedDocument } from 'mongoose'
-
-export type AuditLogDocument = HydratedDocument<AuditLog>
 
 @Schema({ timestamps: { createdAt: true, updatedAt: false } })
 export class AuditLog {
@@ -28,3 +25,5 @@ export const AuditLogSchema = SchemaFactory.createForClass(AuditLog)
 
 AuditLogSchema.index({ createdAt: -1 })
 AuditLogSchema.index({ entityType: 1, entityId: 1 })
+AuditLogSchema.index({ actorId: 1 })
+AuditLogSchema.index({ action: 1 })

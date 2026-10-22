@@ -34,7 +34,6 @@ function isNotFoundError(error: unknown): boolean {
 @Injectable()
 export class CloudinaryService {
   private readonly logger = new Logger(CloudinaryService.name)
-  private readonly cloudName: string | undefined
   private readonly assetFolder: string | undefined
   private readonly configured: boolean
 
@@ -43,7 +42,6 @@ export class CloudinaryService {
     const apiKey = config.get<string>('CLOUDINARY_API_KEY')
     const apiSecret = config.get<string>('CLOUDINARY_API_SECRET')
 
-    this.cloudName = cloudName
     this.assetFolder = config.get<string>('CLOUDINARY_ASSET_FOLDER')
 
     if (cloudName && apiKey && apiSecret) {

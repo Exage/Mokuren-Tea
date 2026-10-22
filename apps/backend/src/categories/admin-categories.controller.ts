@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common'
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AdminAuthGuard } from '../auth/admin-auth.guard.js'
+import { CsrfGuard } from '../auth/csrf.guard.js'
 import { CurrentAdmin } from '../auth/current-admin.decorator.js'
 import {
   AdminCategoryListResponse,
@@ -27,9 +28,11 @@ import { CategoryManagementService } from './category-management.service.js'
 
 // Administrative category management. The class-level guard ensures every
 // method here is authenticated; the controller only resolves the actor and
-// delegates rules, transactions and audit to CategoriesService.
+// delegates rules, transactions and audit to CategoriesService. Mutating
+// routes additionally require a CSRF token because they are
+// cookie-session-authenticated.
 @ApiTags('admin-categories')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, CsrfGuard)
 @Controller('admin/categories')
 export class AdminCategoriesController {
   constructor(

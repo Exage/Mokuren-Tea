@@ -74,8 +74,13 @@ test('compiled CLI loads the backend-root .env for report and backfill from anot
   try {
     const cliDirectory = join(fixtureRoot, 'dist/categories')
     await mkdir(cliDirectory, { recursive: true })
-    const cliPath = join(cliDirectory, 'categories-migration.cli.mjs')
+    const cliPath = join(cliDirectory, 'categories-migration.cli.js')
     await copyFile(join(__dirname, '../../dist/categories/categories-migration.cli.js'), cliPath)
+    await copyFile(
+      join(__dirname, '../../dist/categories/categories-migration.service.js'),
+      join(cliDirectory, 'categories-migration.service.js')
+    )
+    await writeFile(join(fixtureRoot, 'package.json'), JSON.stringify({ type: 'module' }))
     await symlink(join(__dirname, '../../node_modules'), join(fixtureRoot, 'node_modules'), 'dir')
     // Keep both configuration and writes isolated from the developer's .env/database.
     await writeFile(join(fixtureRoot, '.env'), `MONGODB_URI=${mongoUri}\n`)

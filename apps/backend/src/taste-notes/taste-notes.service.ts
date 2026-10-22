@@ -260,10 +260,6 @@ export class TasteNotesService {
     return this.tasteNotesRepository.findByIds(ids, session)
   }
 
-  async findBySlug(slug: string): Promise<{ _id: Types.ObjectId } | null> {
-    return this.tasteNotesRepository.findBySlug(slug)
-  }
-
   /**
    * lockReferences acquires a transaction-scoped write on each taste note so
    * concurrent bindings and deletions contend on the same documents. It is a

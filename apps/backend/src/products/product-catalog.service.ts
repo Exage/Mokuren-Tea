@@ -1,5 +1,6 @@
+import { getAvailableGrams, isOutOfStock } from './domain/product-availability.js'
 import { ProductsRepository } from './products.repository.js'
-import type { CatalogCriteria } from './products.types.js'
+import type { CatalogCriteria, ProductStockOverview } from './products.types.js'
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common'
 import { Types } from 'mongoose'
 import { InventoryService } from '../inventory/inventory.service.js'
@@ -25,6 +26,56 @@ export class ProductCatalogService {
     private readonly inventoryService: InventoryService,
     private readonly mediaAssetsService: MediaAssetsService
   ) {}
+
+  async getStockOverview(): Promise<ProductStockOverview> {
+    const products = await this.productsRepository.findPublishedForStockOverview()
+    const productIds = products.map((p) => new Types.ObjectId(String(p._id)))
+    const stocks = await this.inventoryService.getStockForMany(productIds)
+
+    let lowStockProducts = 0
+    let outOfStockProducts = 0
+    const problematic: ProductStockOverview['problematicProducts'] = []
+
+    for (const product of products) {
+      const stock = stocks.get(String(product._id)) || {
+        physicalGrams: 0,
+        reservedGrams: 0,
+      }
+      const availableGrams = getAvailableGrams(stock.physicalGrams, stock.reservedGrams)
+
+      const variants = Array.isArray(product.variants) ? product.variants : []
+
+      const outOfStock = isOutOfStock(variants, availableGrams)
+
+      if (outOfStock) {
+        outOfStockProducts += 1
+        problematic.push({
+          productId: String(product._id),
+          productName: typeof product.name === 'string' ? product.name : '',
+          availableGrams,
+          issue: 'out-of-stock',
+        })
+      } else {
+        const threshold =
+          typeof product.lowStockThresholdGrams === 'number' ? product.lowStockThresholdGrams : 0
+        if (availableGrams > 0 && availableGrams <= threshold) {
+          lowStockProducts += 1
+          problematic.push({
+            productId: String(product._id),
+            productName: typeof product.name === 'string' ? product.name : '',
+            availableGrams,
+            issue: 'low-stock',
+          })
+        }
+      }
+    }
+
+    return {
+      lowStockProducts,
+      outOfStockProducts,
+      problematicProducts: problematic.slice(0, 50),
+    }
+  }
 
   // Batch image loading through the media module: a single MongoDB query per
   // catalog page, never a Cloudinary API call and never one query per photo.

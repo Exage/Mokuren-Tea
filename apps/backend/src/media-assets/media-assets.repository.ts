@@ -96,11 +96,42 @@ export class MediaAssetsRepository {
     }
 
     // Drafts and archived products count as usages as well.
-    return db
+    const products = await db
       .collection('products')
       .find({ imageIds: objectId }, { projection: { name: 1, slug: 1, status: 1 } })
       .limit(200)
       .toArray()
+
+    // CMS blocks (draft or published) referencing this asset via imageId.
+    const cmsBlocks = await db
+      .collection('cmsblocks')
+      .find(
+        {
+          $or: [{ 'draft.imageId': String(objectId) }, { 'published.imageId': String(objectId) }],
+        },
+        { projection: { pageKey: 1, blockKey: 1 } }
+      )
+      .limit(200)
+      .toArray()
+
+    // All saved revisions referencing this asset via content.imageId.
+    const cmsRevisions = await db
+      .collection('cmsrevisions')
+      .find({ 'content.imageId': String(objectId) }, { projection: { pageKey: 1, blockKey: 1, version: 1 } })
+      .limit(200)
+      .toArray()
+
+    return [...products, ...cmsBlocks, ...cmsRevisions].map((item) => ({
+      id: String(item._id),
+      name:
+        typeof item.name === 'string'
+          ? item.name
+          : typeof item.pageKey === 'string'
+            ? `CMS ${item.pageKey}.${item.blockKey}`
+            : '',
+      slug: typeof item.slug === 'string' ? item.slug : '',
+      status: typeof item.status === 'string' ? item.status : 'cms',
+    }))
   }
 
   async countProductReferences(assetId: Types.ObjectId, session?: ClientSession): Promise<number> {
@@ -110,9 +141,24 @@ export class MediaAssetsRepository {
       return 0
     }
 
-    return db
+    const productCount = await db
       .collection('products')
       .countDocuments({ imageIds: assetId }, { session: session || undefined })
+
+    // CMS blocks (draft or published) referencing this asset via imageId.
+    const cmsBlockCount = await db
+      .collection('cmsblocks')
+      .countDocuments({
+        $or: [{ 'draft.imageId': String(assetId) }, { 'published.imageId': String(assetId) }],
+      },
+      { session: session || undefined })
+
+    // All saved revisions referencing this asset via content.imageId.
+    const cmsRevisionCount = await db
+      .collection('cmsrevisions')
+      .countDocuments({ 'content.imageId': String(assetId) }, { session: session || undefined })
+
+    return productCount + cmsBlockCount + cmsRevisionCount
   }
 
   claimDeletion(objectId: Types.ObjectId, session: ClientSession) {
@@ -173,13 +219,47 @@ export class MediaAssetsRepository {
     }
 
     const counts = new Map<string, number>()
-    const cursor = db.collection('products').find({}, { projection: { imageIds: 1 } })
 
-    for await (const product of cursor) {
+    // Count product usages (all statuses).
+    const productCursor = db.collection('products').find({}, { projection: { imageIds: 1 } })
+
+    for await (const product of productCursor) {
       const ids = Array.isArray(product.imageIds) ? product.imageIds : []
 
       for (const id of ids) {
         const key = String(id)
+        counts.set(key, (counts.get(key) || 0) + 1)
+      }
+    }
+
+    // Count CMS block usages (draft and published).
+    const cmsCursor = db.collection('cmsblocks').find(
+      {},
+      { projection: { 'draft.imageId': 1, 'published.imageId': 1 } }
+    )
+
+    for await (const block of cmsCursor) {
+      for (const field of ['draft', 'published'] as const) {
+        const imageId = block[field]?.imageId
+
+        if (imageId) {
+          const key = String(imageId)
+          counts.set(key, (counts.get(key) || 0) + 1)
+        }
+      }
+    }
+
+    // Count revision usages.
+    const revisionCursor = db.collection('cmsrevisions').find(
+      {},
+      { projection: { 'content.imageId': 1 } }
+    )
+
+    for await (const revision of revisionCursor) {
+      const imageId = revision.content?.imageId
+
+      if (imageId) {
+        const key = String(imageId)
         counts.set(key, (counts.get(key) || 0) + 1)
       }
     }

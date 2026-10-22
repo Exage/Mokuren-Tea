@@ -2,6 +2,7 @@ import type { AdminRequestUser } from '../auth/auth.types.js'
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common'
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AdminAuthGuard } from '../auth/admin-auth.guard.js'
+import { CsrfGuard } from '../auth/csrf.guard.js'
 import { CurrentAdmin } from '../auth/current-admin.decorator.js'
 import { AdminProductListResponse, AdminProductResponse } from './dto/admin-product-response.dto.js'
 import { AdminProductsQueryDto } from './dto/admin-products-query.dto.js'
@@ -28,7 +29,7 @@ export class AdminProductsController {
   }
 
   @Post()
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, CsrfGuard)
   @ApiOperation({ summary: 'Create a draft product' })
   @ApiOkResponse({ type: AdminProductResponse })
   create(
@@ -47,7 +48,7 @@ export class AdminProductsController {
   }
 
   @Patch(':id')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, CsrfGuard)
   @ApiOperation({ summary: 'Update an administrative product card' })
   @ApiOkResponse({ type: AdminProductResponse })
   update(
@@ -59,7 +60,7 @@ export class AdminProductsController {
   }
 
   @Post(':id/publish')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, CsrfGuard)
   @ApiOperation({ summary: 'Publish a draft product' })
   @ApiOkResponse({ type: AdminProductResponse })
   publish(
@@ -70,7 +71,7 @@ export class AdminProductsController {
   }
 
   @Post(':id/archive')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, CsrfGuard)
   @ApiOperation({ summary: 'Archive a product' })
   @ApiOkResponse({ type: AdminProductResponse })
   archive(
@@ -81,7 +82,7 @@ export class AdminProductsController {
   }
 
   @Post(':id/variants')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, CsrfGuard)
   @ApiOperation({ summary: 'Add a variant to a product' })
   @ApiOkResponse({ type: AdminProductResponse })
   addVariant(
@@ -93,7 +94,7 @@ export class AdminProductsController {
   }
 
   @Patch(':id/variants/:variantId')
-  @UseGuards(AdminAuthGuard)
+  @UseGuards(AdminAuthGuard, CsrfGuard)
   @ApiOperation({ summary: 'Update a product variant' })
   @ApiOkResponse({ type: AdminProductResponse })
   updateVariant(

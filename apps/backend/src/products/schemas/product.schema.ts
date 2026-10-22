@@ -6,10 +6,10 @@ import { ProductVariant, ProductVariantSchema } from './product-variant.schema.j
 
 export type ProductDocument = HydratedDocument<Product>
 
-export const PRODUCT_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-
 @Schema({ timestamps: true })
 export class Product {
+  @Prop({ required: true, default: 0 })
+  referenceRevision!: number
   @Prop({ required: true, trim: true, maxlength: 300 })
   name!: string
 

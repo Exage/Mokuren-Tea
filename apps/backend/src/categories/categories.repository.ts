@@ -17,15 +17,14 @@ export class CategoriesRepository {
   }
 
   findById(id: Types.ObjectId, session?: ClientSession) {
-    return this.categoryModel.findById(id).session(session || null).exec()
+    return this.categoryModel
+      .findById(id)
+      .session(session || null)
+      .exec()
   }
 
   findBySlug(slug: string) {
     return this.categoryModel.findOne({ slug }).lean().exec()
-  }
-
-  findByIds(ids: Types.ObjectId[], session?: ClientSession) {
-    return this.categoryModel.find({ _id: { $in: ids } }).session(session || null).exec()
   }
 
   async listAdmin(page: number, limit: number, search?: string) {
@@ -59,14 +58,12 @@ export class CategoriesRepository {
   }
 
   incrementReferenceRevision(id: Types.ObjectId, session: ClientSession) {
-    return this.categoryModel.updateOne(
-      { _id: id },
-      { $inc: { referenceRevision: 1 } },
-      { session, timestamps: false }
-    )
+    return this.categoryModel
+      .updateOne({ _id: id }, { $inc: { referenceRevision: 1 } }, { session, timestamps: false })
+      .exec()
   }
 
   deleteById(id: Types.ObjectId, session: ClientSession) {
-    return this.categoryModel.deleteOne({ _id: id }, { session })
+    return this.categoryModel.deleteOne({ _id: id }, { session }).exec()
   }
 }

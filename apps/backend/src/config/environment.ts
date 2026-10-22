@@ -1,3 +1,5 @@
+import { parseCorsOrigins } from './cors.js'
+
 export function validateEnvironment(config: Record<string, unknown>) {
   const nodeEnv = config.NODE_ENV ?? 'development'
   const port = Number(config.PORT ?? 3001)
@@ -6,6 +8,7 @@ export function validateEnvironment(config: Record<string, unknown>) {
   const apiKey = config.CLOUDINARY_API_KEY
   const apiSecret = config.CLOUDINARY_API_SECRET
   const assetFolder = config.CLOUDINARY_ASSET_FOLDER
+  parseCorsOrigins(config.CORS_ORIGINS)
 
   if (!['development', 'test', 'production'].includes(String(nodeEnv))) {
     throw new Error('NODE_ENV must be development, test, or production')
@@ -44,6 +47,46 @@ export function validateEnvironment(config: Record<string, unknown>) {
     // never land in the account root.
     if (typeof assetFolder !== 'string' || assetFolder.trim().length === 0) {
       throw new Error('CLOUDINARY_ASSET_FOLDER must be a non-empty string')
+    }
+  }
+
+  // Authentication settings are optional with sensible defaults, but when
+  // provided they must be well-formed so operators cannot silently degrade
+  // session or cookie security.
+  const cookieSameSite = config.SESSION_COOKIE_SAME_SITE
+  if (cookieSameSite !== undefined && !['lax', 'strict', 'none'].includes(String(cookieSameSite))) {
+    throw new Error('SESSION_COOKIE_SAME_SITE must be lax, strict, or none')
+  }
+
+  const sessionTtlDays = config.SESSION_TTL_DAYS
+  if (sessionTtlDays !== undefined) {
+    const parsed = Number(sessionTtlDays)
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('SESSION_TTL_DAYS must be a positive integer')
+    }
+  }
+
+  const rateLimitMax = config.RATE_LIMIT_MAX
+  if (rateLimitMax !== undefined) {
+    const parsed = Number(rateLimitMax)
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('RATE_LIMIT_MAX must be a positive integer')
+    }
+  }
+
+  const rateLimitWindow = config.RATE_LIMIT_WINDOW_MS
+  if (rateLimitWindow !== undefined) {
+    const parsed = Number(rateLimitWindow)
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('RATE_LIMIT_WINDOW_MS must be a positive integer')
+    }
+  }
+
+  const tempPasswordTtl = config.TEMPORARY_PASSWORD_TTL_HOURS
+  if (tempPasswordTtl !== undefined) {
+    const parsed = Number(tempPasswordTtl)
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error('TEMPORARY_PASSWORD_TTL_HOURS must be a positive integer')
     }
   }
 

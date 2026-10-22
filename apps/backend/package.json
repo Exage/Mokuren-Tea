@@ -18,7 +18,11 @@
     "recount:media-usage": "node dist/media-assets/media-assets-reconcile.cli.js recount",
     "db:up": "docker compose up -d --wait --wait-timeout 120",
     "db:down": "docker compose down",
-    "db:status": "docker compose ps"
+    "db:status": "docker compose ps",
+    "admin:create": "node dist/auth/admin-create.cli.js",
+    "content:initialize": "node dist/cms/content-initialize.cli.js",
+    "indexes:report": "node dist/database/indexes.cli.js report",
+    "indexes:ensure": "node dist/database/indexes.cli.js ensure"
   },
   "dependencies": {
     "@nestjs/common": "12.1.3",

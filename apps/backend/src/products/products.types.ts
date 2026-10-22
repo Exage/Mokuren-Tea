@@ -97,3 +97,14 @@ export interface CatalogCriteria {
   minPrice?: ProductPrice
   maxPrice?: ProductPrice
 }
+
+export interface ProductStockOverview {
+  lowStockProducts: number
+  outOfStockProducts: number
+  problematicProducts: Array<{
+    productId: string
+    productName: string
+    availableGrams: number
+    issue: 'low-stock' | 'out-of-stock'
+  }>
+}

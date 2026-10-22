@@ -61,4 +61,45 @@ export class InventoryService {
 
     return result
   }
+
+  // Atomically applies a delta to a single product's stock inside the caller's
+  // transaction. The conditional update rejects writes that would break
+  // physicalGrams >= reservedGrams or drive either counter negative. Returns
+  // the resulting stock levels, or null when the condition did not match
+  // (concurrent change or invariant violation).
+  async applyDelta(
+    productId: Types.ObjectId,
+    deltaPhysical: number,
+    deltaReserved: number,
+    session: ClientSession
+  ): Promise<StockLevels | null> {
+    const result = await this.inventoryModel
+      .findOneAndUpdate(
+        {
+          productId,
+          $and: [
+            {
+              $expr: {
+                $gte: [
+                  { $add: ['$physicalGrams', deltaPhysical] },
+                  { $add: ['$reservedGrams', deltaReserved] },
+                ],
+              },
+            },
+            { $expr: { $gte: [{ $add: ['$physicalGrams', deltaPhysical] }, 0] } },
+            { $expr: { $gte: [{ $add: ['$reservedGrams', deltaReserved] }, 0] } },
+          ],
+        },
+        { $inc: { physicalGrams: deltaPhysical, reservedGrams: deltaReserved } },
+        { session, returnDocument: 'after' }
+      )
+      .lean<{ physicalGrams: number; reservedGrams: number } | null>()
+      .exec()
+
+    if (!result) {
+      return null
+    }
+
+    return { physicalGrams: result.physicalGrams, reservedGrams: result.reservedGrams }
+  }
 }

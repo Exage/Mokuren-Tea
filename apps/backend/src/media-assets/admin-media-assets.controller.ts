@@ -32,6 +32,7 @@ import {
 } from '@nestjs/swagger'
 import { CurrentAdmin } from '../auth/current-admin.decorator.js'
 import { AdminAuthGuard } from '../auth/admin-auth.guard.js'
+import { CsrfGuard } from '../auth/csrf.guard.js'
 import { MAX_UPLOAD_BYTES, MediaAssetsService } from './media-assets.service.js'
 import { MediaAssetsQueryDto } from './dto/media-assets-query.dto.js'
 import {
@@ -86,9 +87,11 @@ interface MulterFile {
 }
 
 // Administrative media library. Upload accepts exactly one file via multipart/form-data.
+// Mutating routes additionally require a CSRF token because they are
+// cookie-session-authenticated.
 @ApiTags('admin-media-assets')
 @Controller('admin/media-assets')
-@UseGuards(AdminAuthGuard)
+@UseGuards(AdminAuthGuard, CsrfGuard)
 @UseFilters(MediaUploadErrorFilter)
 export class AdminMediaAssetsController {
   constructor(private readonly mediaAssetsService: MediaAssetsService) {}
