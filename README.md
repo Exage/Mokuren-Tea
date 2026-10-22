@@ -18,10 +18,12 @@ pnpm install --frozen-lockfile
 
 ```text
 apps/backend/ — NestJS API and local MongoDB configuration
+apps/client/  — Next.js and React storefront with colocated CSS Modules
 packages/     — future shared packages and configuration
 ```
 
 See [the backend guide](apps/backend/README.md) for configuration and commands.
+See [the client guide](apps/client/README.md) for UI development and architecture.
 
 ## Local development
 
@@ -37,6 +39,8 @@ initializes a single-node replica set and publishes container port `27017` at
 MongoDB replica set is already available, skip this command and set `MONGODB_URI`
 in `apps/backend/.env`.
 The API health endpoint is `http://localhost:3001/api/health`.
+The storefront is available at `http://localhost:3000`. To work on the UI alone,
+run `pnpm --filter client dev`; the current static screen does not require MongoDB.
 
 ## Commands
 
