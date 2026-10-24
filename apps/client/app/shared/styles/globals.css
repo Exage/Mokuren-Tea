@@ -11,8 +11,8 @@
   --color-accent-soft: #edf2e7;
   --color-on-primary: #ffffff;
 
-  --header-height: 88px;
-  --header-height-scrolled: 60px;
+  --header-height: 8.8rem;
+  --header-height-scrolled: 6rem;
 
   --border-radius-sm: 0.8rem;
   --border-radius: 1.2rem;
@@ -44,7 +44,7 @@ body {
   color: var(--color-text);
 
   font-family: var(--font-body);
-  font-size: 16px;
+  font-size: 1.6rem;
 }
 
 h1,

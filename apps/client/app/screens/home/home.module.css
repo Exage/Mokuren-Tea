@@ -1,9 +1,9 @@
 .home {
-  padding-block: 40px;
+  padding-block: 4rem;
 }
 
 @media (max-width: 560px) {
   .home {
-    padding-block: 24px;
+    padding-block: 2.4rem;
   }
 }

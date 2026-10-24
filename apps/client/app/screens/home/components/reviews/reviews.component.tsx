@@ -1,6 +1,7 @@
 'use client'
 
 import clsx from 'clsx'
+import { Eyebrow } from '@/app/shared/components/eyebrow'
 import { Title } from '@/app/shared/components/title'
 import { useReviewsHook } from './reviews.hook'
 import styles from './reviews.module.css'
@@ -28,7 +29,7 @@ export function Reviews() {
   return (
     <section className={styles.reviews} aria-labelledby={`${carouselId}-title`}>
       <div className={styles.heading}>
-        <p className={styles.eyebrow}>Testimonials</p>
+        <Eyebrow className={styles.eyebrow}>Testimonials</Eyebrow>
         <Title id={`${carouselId}-title`} size="xl" className={styles.title}>
           What our customers say.
         </Title>
@@ -92,7 +93,7 @@ export function Reviews() {
               onClick={scrollPrevious}
               onFocus={pausePlayback}
             >
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m14 6-6 6 6 6" />
               </svg>
             </button>
@@ -104,7 +105,7 @@ export function Reviews() {
               onClick={scrollNext}
               onFocus={pausePlayback}
             >
-              <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="m10 6 6 6-6 6" />
               </svg>
             </button>

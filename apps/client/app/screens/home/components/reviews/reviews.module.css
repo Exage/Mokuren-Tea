@@ -2,8 +2,8 @@
   display: grid;
   grid-template-columns: 40fr 60fr;
   align-items: center;
-  gap: 48px;
-  padding-block: 22px 40px;
+  gap: 4.8rem;
+  padding-block: 2.2rem 4rem;
 }
 
 .heading,
@@ -13,16 +13,11 @@
 
 .eyebrow {
   color: var(--color-primary-dark);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.6;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
 }
 
 .title {
-  margin-top: 10px;
-  font-size: clamp(30px, 3.2vw, 42px);
+  margin-top: 1rem;
+  font-size: clamp(3rem, 3.2vw, 4.2rem);
 }
 
 .viewport {
@@ -43,7 +38,7 @@
 .quote {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: clamp(22px, 2vw, 26px);
+  font-size: clamp(2.2rem, 2vw, 2.6rem);
 }
 
 .quote p {
@@ -52,10 +47,10 @@
 
 .author {
   display: block;
-  margin-top: 8px;
+  margin-top: 0.8rem;
   color: var(--color-text-muted);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 1.3rem;
   font-style: normal;
   line-height: 1.6;
 }
@@ -69,26 +64,26 @@
 
 .controls {
   flex-wrap: wrap;
-  gap: 8px 20px;
-  margin-top: 14px;
+  gap: 0.8rem 2rem;
+  margin-top: 1.4rem;
 }
 
 .dots {
-  gap: 2px;
+  gap: 0.2rem;
 }
 
 .dot {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 44px;
+  width: 2.4rem;
+  height: 4.4rem;
   padding: 0;
   cursor: pointer;
 }
 
 .dot::before {
-  width: 12px;
-  height: 12px;
+  width: 1.2rem;
+  height: 1.2rem;
   border-radius: 50%;
   background: var(--color-sage);
   transition: background 180ms ease;
@@ -100,15 +95,15 @@
 }
 
 .actions {
-  gap: 8px;
+  gap: 0.8rem;
 }
 
 .arrow {
   display: grid;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
+  width: 4.4rem;
+  height: 4.4rem;
   padding: 0;
   border: 1px solid var(--color-border);
   border-radius: 50%;
@@ -122,6 +117,8 @@
 }
 
 .arrow svg {
+  width: 2rem;
+  height: 2rem;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.5;
@@ -150,8 +147,8 @@
 @media (max-width: 760px) {
   .reviews {
     grid-template-columns: 1fr;
-    gap: 24px;
-    padding-block: 32px 24px;
+    gap: 2.4rem;
+    padding-block: 3.2rem 2.4rem;
   }
 }
 
