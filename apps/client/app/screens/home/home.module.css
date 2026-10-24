@@ -20,13 +20,6 @@
   text-transform: uppercase;
 }
 
-.title {
-  font-family: var(--font-heading);
-  font-size: clamp(3rem, 10vw, 6rem);
-  font-weight: 600;
-  line-height: 1.1;
-}
-
 .description {
   color: var(--color-text-muted);
   font-size: 1.125rem;

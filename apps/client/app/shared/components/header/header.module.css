@@ -1,0 +1,210 @@
+.header {
+  position: fixed;
+  width: 100%;
+
+  top: 0;
+  left: 0;
+
+  background-color: rgba(255, 255, 255, 0.85);
+  line-height: 1.6;
+
+  transition: background 0.25s ease;
+
+  z-index: 50;
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  height: var(--header-height);
+
+  transition: height 0.25s ease;
+}
+
+.scrolled {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 -1px var(--color-border);
+}
+
+.scrolled .inner {
+  height: var(--header-height-scrolled);
+}
+
+.menuOpen {
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  background: var(--color-surface);
+  backdrop-filter: none;
+  box-shadow: none;
+  transition: none;
+}
+
+.menuOpen .inner {
+  transition: none;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.brandMark {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
+.brandMark svg {
+  width: 20px;
+  height: 20px;
+}
+
+.nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navLink {
+  font: 600 14px/1 var(--font-body);
+  padding: 12px 14px;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+}
+
+.navLink:hover {
+  background: rgba(96, 123, 96, 0.12);
+}
+
+.nav a[aria-current='page'] {
+  background: var(--color-accent-soft);
+}
+
+.bagBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-text);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 11px 18px;
+  font: 600 14px var(--font-body);
+}
+
+.bagBtn:hover {
+  background: #232b22;
+}
+
+.bagCount {
+  background: #ffffff;
+  color: var(--color-text);
+  border-radius: 999px;
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.hamburger {
+  display: none;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.hamburger svg {
+  width: 22px;
+  height: 22px;
+}
+
+.headerActions {
+  display: none;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
+}
+
+.mobilePanel {
+  border-top: 1px solid var(--color-border);
+  padding: 32px 24px 40px;
+  font-family: var(--font-heading);
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.mobilePanel a {
+  display: block;
+  padding: 24px 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.mobilePanel a[aria-current='page'] {
+  color: var(--color-primary-dark);
+}
+
+@media (max-width: 1024px) {
+  .nav {
+    display: none;
+  }
+
+  .hamburger {
+    display: inline-flex;
+  }
+
+  .headerActions {
+    display: flex;
+  }
+}
+
+@media (max-width: 400px) {
+  .inner {
+    gap: 8px;
+  }
+
+  .brand {
+    font-size: 21px;
+    gap: 6px;
+  }
+
+  .brandMark {
+    width: 30px;
+    height: 30px;
+  }
+
+  .headerActions .bagBtn {
+    padding: 9px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header,
+  .inner {
+    transition: none;
+  }
+}

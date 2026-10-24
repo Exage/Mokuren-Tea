@@ -1,0 +1,29 @@
+.title {
+  margin: 0;
+
+  color: inherit;
+
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.12;
+}
+
+.size3xl {
+  font-size: clamp(44px, 5vw, 68px);
+}
+
+.size2xl {
+  font-size: clamp(40px, 4.6vw, 60px);
+}
+
+.sizeXl {
+  font-size: clamp(32px, 3.6vw, 48px);
+}
+
+.sizeLg {
+  font-size: clamp(30px, 3.2vw, 42px);
+}
+
+.sizeMd {
+  font-size: 24px;
+}

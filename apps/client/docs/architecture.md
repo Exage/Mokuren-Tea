@@ -109,6 +109,7 @@ owned by a component in that component's folder.
 | UI used only by one screen              | `app/screens/<name>/components/<name>/` |
 | Pure screen-specific logic              | `app/screens/<name>/lib/`               |
 | Application-wide UI                     | `app/shared/components/<name>/`         |
+| Reusable React hooks                    | `app/shared/hooks/`                     |
 | Shared styles                           | `app/shared/styles/`                    |
 | Reused constants                        | `app/shared/constants/`                 |
 | Reused domain interfaces                | `app/shared/interface/`                 |
@@ -118,6 +119,12 @@ owned by a component in that component's folder.
 
 Create optional directories when real code needs them. Keep business-specific logic
 close to its screen until multiple consumers justify sharing it.
+
+`useWindowSizeHook` from `@/app/shared/hooks` returns the current viewport `width`
+and `height` in CSS pixels and updates them on window resize. Both values are
+`null` during server rendering and the initial hydration render. Keep layout
+breakpoints in CSS Modules; use this hook when component behavior needs the
+viewport dimensions.
 
 ## Backend integration
 

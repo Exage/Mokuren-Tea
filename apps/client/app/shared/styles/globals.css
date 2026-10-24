@@ -16,6 +16,9 @@
   --font-body: 'Inter', system-ui, sans-serif;
   --font-heading: 'Cormorant Garamond', Georgia, serif;
 
+  --header-height: 88px;
+  --header-height-scrolled: 60px;
+
   --border-radius-sm: 0.8rem;
   --border-radius: 1.2rem;
   --shadow-elevated: 0 1.2rem 3.2rem rgb(51 61 50 / 10%);
