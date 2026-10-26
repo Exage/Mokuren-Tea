@@ -1,0 +1,133 @@
+.product {
+  flex: 1;
+  padding: 5.6rem 0 7.2rem;
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 2.4rem;
+  color: var(--color-primary-dark);
+  font-size: 1.4rem;
+  line-height: 1.6;
+}
+
+.back:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.4rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 4rem;
+}
+
+.details {
+  min-width: 0;
+}
+
+.category {
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.6;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 0.8rem 0;
+  font-size: clamp(3.6rem, 4vw, 5.4rem);
+}
+
+.tastes {
+  color: var(--color-text-muted);
+}
+
+.description {
+  margin-top: 1.6rem;
+}
+
+.specifications {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2rem;
+  margin: 2rem 0 0;
+}
+
+.specification {
+  padding: 1.4rem 1.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  line-height: 1.6;
+}
+
+.specification dt {
+  margin-bottom: 0.4rem;
+  color: var(--color-text-muted);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.specification dd {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.notice {
+  margin-top: 1.6rem;
+  padding: 1.4rem 1.6rem;
+  border: 1px solid var(--color-sage);
+  border-radius: var(--border-radius);
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  font-size: 1.4rem;
+  line-height: 1.6;
+}
+
+.related {
+  margin-top: 5.6rem;
+}
+
+.relatedTitle {
+  margin-bottom: 2rem;
+  font-size: 3.4rem;
+}
+
+.relatedGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: 3.2rem;
+  }
+
+  .relatedGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .product {
+    padding: 3.2rem 0 4.8rem;
+  }
+
+  .specifications,
+  .relatedGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .related {
+    margin-top: 4rem;
+  }
+}

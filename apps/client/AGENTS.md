@@ -22,6 +22,10 @@ screens, components, hooks, or styles. Root repository rules also apply.
   and `className={styles.title}`. Do not add Tailwind, utility-class frameworks,
   or CSS-in-JS. Keep selectors locally scoped; avoid `:global` overrides.
 - Use `clsx` to combine conditional or multiple CSS class names.
+- Do not use `padding-block`. Use `padding` shorthand (for example, `padding: 12px 0`)
+  or explicit `padding-top` and `padding-bottom` declarations instead.
+- Do not use `padding-inline`. Use `padding` shorthand (for example, `padding: 0 12px`)
+  or explicit `padding-left` and `padding-right` declarations instead.
 - Put shared styles in `app/shared/styles/`. Keep `globals.css` there limited to
   tokens, resets, and document-wide defaults, and import it from the root layout.
 - Put screen-specific components in the screen's `components/` folder. Put

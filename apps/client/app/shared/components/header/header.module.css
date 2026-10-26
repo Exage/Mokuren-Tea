@@ -84,7 +84,7 @@
 .navLink {
   font: 600 1.4rem/1 var(--font-body);
   padding: 1.2rem 1.4rem;
-  border-radius: 0.8rem;
+  border-radius: 999px;
   letter-spacing: 0.02em;
 }
 

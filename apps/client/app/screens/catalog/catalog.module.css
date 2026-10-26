@@ -1,0 +1,22 @@
+.catalog {
+  flex: 1;
+  padding: 5.6rem 0 7.2rem;
+}
+
+.heading {
+  max-width: 64rem;
+  margin-bottom: 0.4rem;
+}
+
+.eyebrow {
+  color: var(--color-primary-dark);
+}
+
+.title {
+  margin: 1rem 0 1.2rem;
+}
+
+.description {
+  max-width: 56ch;
+  color: var(--color-text-muted);
+}

@@ -120,6 +120,12 @@ owned by a component in that component's folder.
 Create optional directories when real code needs them. Keep business-specific logic
 close to its screen until multiple consumers justify sharing it.
 
+Use the shared `Select` component for single-value dropdowns. Pass `value`,
+`options`, and `onValueChange`, and provide an accessible label. It owns the
+styled list, keyboard navigation, and dismissal behavior. Use `DropdownTrigger`
+for dropdowns with custom content, such as price fields or multiple taste filters,
+so their button and chevron match the select.
+
 `useWindowSizeHook` from `@/app/shared/hooks` returns the current viewport `width`
 and `height` in CSS pixels and updates them on window resize. Both values are
 `null` during server rendering and the initial hydration render. Keep layout

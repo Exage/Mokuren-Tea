@@ -13,6 +13,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/sencha.jpg',
     price: 14.9,
     weightGrams: 50,
+    brewing: { temperature: '80°C', time: '2 min', amount: '4 g / 250 ml' },
     isPopular: true,
   },
   {
@@ -27,6 +28,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/milk-oolong.jpg',
     price: 18.5,
     weightGrams: 50,
+    brewing: { temperature: '90°C', time: '3 min', amount: '5 g / 250 ml' },
     isPopular: true,
   },
   {
@@ -41,6 +43,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/shu-puerh.jpg',
     price: 16.9,
     weightGrams: 50,
+    brewing: { temperature: '95°C', time: '3 min', amount: '5 g / 250 ml' },
     isPopular: true,
   },
   {
@@ -55,6 +58,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/assam.jpg',
     price: 12.9,
     weightGrams: 50,
+    brewing: { temperature: '95°C', time: '3 min', amount: '4 g / 250 ml' },
     isPopular: true,
   },
   {
@@ -69,6 +73,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/dragon-well.jpg',
     price: 21,
     weightGrams: 50,
+    brewing: { temperature: '80°C', time: '2 min', amount: '4 g / 250 ml' },
     isPopular: false,
   },
   {
@@ -83,6 +88,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/gyokuro.jpg',
     price: 27.5,
     weightGrams: 50,
+    brewing: { temperature: '55°C', time: '2 min', amount: '5 g / 120 ml' },
     isPopular: false,
   },
   {
@@ -96,6 +102,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/earl-grey.jpg',
     price: 13.5,
     weightGrams: 50,
+    brewing: { temperature: '95°C', time: '3 min', amount: '4 g / 250 ml' },
     isPopular: false,
   },
   {
@@ -109,6 +116,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/tie-guan-yin.jpg',
     price: 19.9,
     weightGrams: 50,
+    brewing: { temperature: '90°C', time: '3 min', amount: '5 g / 250 ml' },
     isPopular: false,
   },
   {
@@ -122,6 +130,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/white-peony.jpg',
     price: 17.5,
     weightGrams: 50,
+    brewing: { temperature: '85°C', time: '4 min', amount: '5 g / 250 ml' },
     isPopular: false,
   },
   {
@@ -135,6 +144,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/jasmine.jpg',
     price: 15.9,
     weightGrams: 50,
+    brewing: { temperature: '80°C', time: '2 min', amount: '4 g / 250 ml' },
     isPopular: false,
   },
   {
@@ -148,6 +158,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/berry.jpg',
     price: 11.9,
     weightGrams: 50,
+    brewing: { temperature: '100°C', time: '6 min', amount: '6 g / 300 ml' },
     isPopular: false,
   },
   {
@@ -162,6 +173,7 @@ export const MOCK_PRODUCTS: Product[] = [
     image: '/images/products/mint.jpg',
     price: 9.9,
     weightGrams: 50,
+    brewing: { temperature: '95°C', time: '5 min', amount: '5 g / 300 ml' },
     isPopular: false,
   },
 ]

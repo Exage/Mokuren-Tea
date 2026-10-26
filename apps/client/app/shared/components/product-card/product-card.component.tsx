@@ -8,9 +8,14 @@ import styles from './product-card.module.css'
 type ProductCardProps = {
   product: Product
   className?: string
+  sizes?: string
 }
 
-export function ProductCard({ product, className }: ProductCardProps) {
+export function ProductCard({
+  product,
+  className,
+  sizes = '(max-width: 400px) calc(100vw - 3.2rem), (max-width: 560px) calc((100vw - 4.4rem) / 2), (max-width: 1024px) calc((100vw - 6.8rem) / 2), calc((min(100vw, 1200px) - 10.8rem) / 4)',
+}: ProductCardProps) {
   return (
     <article className={clsx(styles.card, className)}>
       <Link className={styles.link} href={`/catalog/${product.slug}`}>
@@ -19,7 +24,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
           src={product.image}
           alt={`${product.name} tea`}
           fill
-          sizes="(max-width: 400px) calc(100vw - 3.2rem), (max-width: 560px) calc((100vw - 4.4rem) / 2), (max-width: 1024px) calc((100vw - 6.8rem) / 2), calc((min(100vw, 1200px) - 10.8rem) / 4)"
+          sizes={sizes}
         />
         <div className={styles.content}>
           <Title className={styles.title} size="md">
