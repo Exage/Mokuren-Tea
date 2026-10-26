@@ -29,7 +29,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" className={clsx(headingFont.variable, bodyFont.variable)}>
       <body className={styles.body}>
         <Header />
+
         {children}
+
         <Footer />
       </body>
     </html>
