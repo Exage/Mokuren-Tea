@@ -1,0 +1,71 @@
+.footer {
+  margin-top: 4rem;
+  padding: 4.8rem 0 2.8rem;
+  background: #262d25;
+  color: #cfc9b4;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(2, minmax(0, 1fr));
+  gap: 3.2rem;
+}
+
+.brand {
+  color: var(--color-on-primary);
+  font-family: var(--font-heading);
+  font-size: 2.6rem;
+}
+
+.description {
+  max-width: 36ch;
+  margin: 1.6rem 0;
+  line-height: inherit;
+}
+
+.title {
+  margin: 1.6rem 0;
+  color: var(--color-on-primary);
+  font-weight: 700;
+  line-height: inherit;
+}
+
+.links {
+  margin: 1.6rem 0;
+  padding: 0;
+  list-style: none;
+}
+
+.links a {
+  color: #efead9;
+}
+
+.links a:hover {
+  text-decoration: underline;
+}
+
+.address {
+  margin: 1.6rem 0;
+  font-style: normal;
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 3.2rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgb(255 255 255 / 14%);
+  color: #9aa392;
+  font-size: 1.3rem;
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.6rem;
+  }
+}

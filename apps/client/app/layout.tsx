@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import { Cormorant_Garamond, Inter } from 'next/font/google'
 import { Header } from '@/app/shared/components/header'
+import { Footer } from '@/app/shared/components/footer'
 import styles from './layout.module.css'
 import '@/app/shared/styles/globals.css'
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className={styles.body}>
         <Header />
         {children}
+        <Footer />
       </body>
     </html>
   )
