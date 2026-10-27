@@ -104,6 +104,13 @@ export const contactsContentSchema = z
     phone: nonEmptyString.max(100),
     email: z.string().email().max(200),
     hours: nonEmptyString.max(500),
+    location: z
+      .object({
+        latitude: z.number().min(-85.0511).max(85.0511),
+        longitude: z.number().min(-180).max(180),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 

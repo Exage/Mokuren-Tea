@@ -79,6 +79,29 @@ test('CMS initialization is repeatable and draft versions reject stale saves', a
   assert.equal(stale.body.code, 'STALE_VERSION')
 })
 
+test('published contacts expose configured map coordinates, without exposing a draft', async () => {
+  const route = '/api/admin/cms/blocks/contacts/contacts.content'
+  const content = {
+    title: 'Visit us',
+    address: 'Tea Street',
+    phone: '+375291234567',
+    email: 'tea@example.com',
+    hours: 'Daily',
+    location: { latitude: 53.9, longitude: 27.56 },
+  }
+  const draft = await request(app.getHttpServer()).patch(`${route}/draft`).set(headers()).send({
+    pageKey: 'contacts', blockKey: 'contacts.content', expectedDraftVersion: 0, content,
+  })
+  assert.equal(draft.status, 200, JSON.stringify(draft.body))
+  const before = await request(app.getHttpServer()).get('/api/public/cms/pages/contacts')
+  assert.equal(before.body.blocks['contacts.content'].content, null)
+  await request(app.getHttpServer()).post(`${route}/publish`).set(headers()).send({
+    pageKey: 'contacts', blockKey: 'contacts.content',
+  }).expect(201)
+  const published = await request(app.getHttpServer()).get('/api/public/cms/pages/contacts')
+  assert.deepEqual(published.body.blocks['contacts.content'].content.location, content.location)
+})
+
 test('CMS preview keeps other blocks published and restore changes only draft', async () => {
   const hero = '/api/admin/cms/blocks/home/home.hero'
   const publish = await request(app.getHttpServer()).post(`${hero}/publish`).set(headers()).send({
@@ -137,6 +160,8 @@ test('CMS media reference prevents deletion and featured product cannot be archi
       content: { title: 'With photo', imageId: refs.imageId },
     })
   assert.equal(saveImage.status, 200, JSON.stringify(saveImage.body))
+  const beforePublish = await request(app.getHttpServer()).get('/api/public/cms/pages/home')
+  assert.equal(beforePublish.body.blocks['home.hero'].image, null)
   const rawAsset = await db
     .collection('mediaassets')
     .findOne({ _id: new Types.ObjectId(refs.imageId) })
@@ -181,6 +206,31 @@ test('CMS media reference prevents deletion and featured product cannot be archi
       blockKey: 'home.featuredTeas',
     })
     .expect(201)
+  const publishHero = await request(app.getHttpServer())
+    .post(`${hero}/publish`)
+    .set(headers())
+    .send({
+      pageKey: 'home',
+      blockKey: 'home.hero',
+    })
+  assert.equal(publishHero.status, 201, JSON.stringify(publishHero.body))
+  const publicPage = await request(app.getHttpServer()).get('/api/public/cms/pages/home')
+  assert.equal(publicPage.status, 200)
+  assert.equal(publicPage.body.blocks['home.hero'].image.id, refs.imageId)
+  assert.ok(publicPage.body.blocks['home.hero'].image.url)
+  const featured = publicPage.body.blocks['home.featuredTeas']
+  assert.deepEqual(
+    featured.products.map((item) => item.id),
+    [product.body.id]
+  )
+  assert.equal(featured.products[0].slug, 'featured-tea')
+  assert.equal(featured.products[0].variants[0].price, 21.9)
+  assert.equal(featured.products[0].stock, undefined)
+  const publicBlock = await request(app.getHttpServer()).get(
+    '/api/public/cms/pages/home/blocks/home.featuredTeas'
+  )
+  assert.deepEqual(publicBlock.body, featured)
+
   const archive = await request(app.getHttpServer())
     .post(`/api/admin/products/${product.body.id}/archive`)
     .set(headers())

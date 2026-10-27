@@ -167,6 +167,13 @@ export class ProductsRepository {
     return this.productModel.findOne({ slug, status: 'published' }).lean().exec()
   }
 
+  findPublishedByIds(ids: Types.ObjectId[]) {
+    return this.productModel
+      .find({ _id: { $in: ids }, status: 'published' })
+      .lean()
+      .exec()
+  }
+
   async listAdmin(query: AdminProductsQueryDto, page: number, limit: number) {
     const filter: Record<string, unknown> = {}
 

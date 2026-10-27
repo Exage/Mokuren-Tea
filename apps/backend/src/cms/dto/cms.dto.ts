@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { IsMongoId, IsNotEmpty, IsNumber, IsObject, IsString, Min } from 'class-validator'
+import {
+  PublicImageResponse,
+  PublicProductResponse,
+} from '../../products/dto/public-product-response.dto.js'
 
 export class SaveCmsDraftDto {
   @ApiProperty({ example: 'home' })
@@ -155,6 +159,12 @@ export class PublishedCmsBlockDto {
 
   @ApiProperty()
   version!: number
+
+  @ApiProperty({ type: PublicImageResponse, nullable: true })
+  image!: PublicImageResponse | null
+
+  @ApiProperty({ type: [PublicProductResponse] })
+  products!: PublicProductResponse[]
 }
 
 export class PublishedCmsPageDto {

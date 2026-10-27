@@ -141,6 +141,19 @@ export class ProductCatalogService {
     })
   }
 
+  async getPublishedByIds(ids: string[]): Promise<PublicProductView[]> {
+    const validIds = ids.filter((id) => Types.ObjectId.isValid(id))
+    const products = await this.productsRepository.findPublishedByIds(
+      validIds.map((id) => new Types.ObjectId(id))
+    )
+    const presented = await this.presentMany(products as unknown as Record<string, unknown>[])
+    const byId = new Map(presented.map((product) => [product.id, product]))
+    return validIds.flatMap((id) => {
+      const product = byId.get(id)
+      return product ? [product] : []
+    })
+  }
+
   async getBySlug(slug: string): Promise<PublicProductView> {
     const normalized = slug.trim().toLowerCase()
     const raw = await this.productsRepository.findPublishedBySlug(normalized)

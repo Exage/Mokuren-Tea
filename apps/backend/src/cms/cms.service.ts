@@ -8,6 +8,9 @@ import { InjectConnection } from '@nestjs/mongoose'
 import { Types } from 'mongoose'
 import type { ClientSession, Connection } from 'mongoose'
 import { ProductsService } from '../products/products.service.js'
+import { ProductCatalogService } from '../products/product-catalog.service.js'
+import type { PublicProductView } from '../products/products.types.js'
+import type { ResolvedImage } from '../media-assets/media-assets.types.js'
 import { MediaAssetsService } from '../media-assets/media-assets.service.js'
 import { AuditService } from '../audit/audit.service.js'
 import { CmsBlocksRepository } from './cms.repository.js'
@@ -43,6 +46,7 @@ const CMS_PAGE_KEYS: string[] = ['home', 'catalog', 'about', 'contacts']
 export class CmsService {
   constructor(
     private readonly productsService: ProductsService,
+    private readonly productCatalogService: ProductCatalogService,
     private readonly mediaAssetsService: MediaAssetsService,
     private readonly blocksRepository: CmsBlocksRepository,
     private readonly revisionsRepository: CmsRevisionsRepository,
@@ -133,32 +137,46 @@ export class CmsService {
 
   // ---- Public: read published content ----
 
-  async getPublishedBlock(
-    pageKey: string,
-    blockKey: CmsBlockKey
-  ): Promise<{ content: Record<string, unknown> | null; version: number }> {
+  private async presentPublishedBlock(
+    content: Record<string, unknown> | null,
+    version: number
+  ): Promise<{
+    content: Record<string, unknown> | null
+    version: number
+    image: ResolvedImage | null
+    products: PublicProductView[]
+  }> {
+    const imageId = this.imageId(content)
+    const productIds = Array.isArray(content?.teaIds)
+      ? content.teaIds.filter((id): id is string => typeof id === 'string')
+      : []
+    const [images, products] = await Promise.all([
+      imageId ? this.mediaAssetsService.resolvePublicImages([imageId], 'detail') : [],
+      productIds.length ? this.productCatalogService.getPublishedByIds(productIds) : [],
+    ])
+    return { content, version, image: images[0] || null, products }
+  }
+
+  async getPublishedBlock(pageKey: string, blockKey: CmsBlockKey) {
     requireBlock(pageKey, blockKey)
     const doc = await this.blocksRepository.findByKeys(pageKey, blockKey)
     if (!doc) {
-      return { content: null, version: 0 }
+      return this.presentPublishedBlock(null, 0)
     }
-    return { content: doc.published ?? null, version: doc.publishedVersion }
+    return this.presentPublishedBlock(doc.published ?? null, doc.publishedVersion)
   }
 
-  async getPublishedPage(pageKey: string): Promise<{
-    pageKey: string
-    blocks: Record<string, { content: Record<string, unknown> | null; version: number }>
-  }> {
+  async getPublishedPage(pageKey: string) {
     requirePage(pageKey)
     const blocksForPage = CMS_BLOCK_KEYS_FOR_PAGE[pageKey] ?? []
-    const result: Record<string, { content: Record<string, unknown> | null; version: number }> = {}
+    const result: Record<string, Awaited<ReturnType<CmsService['presentPublishedBlock']>>> = {}
 
     for (const blockKey of blocksForPage) {
       const doc = await this.blocksRepository.findByKeys(pageKey, blockKey)
-      result[blockKey] = {
-        content: doc?.published ?? null,
-        version: doc?.publishedVersion ?? 0,
-      }
+      result[blockKey] = await this.presentPublishedBlock(
+        doc?.published ?? null,
+        doc?.publishedVersion ?? 0
+      )
     }
 
     return { pageKey, blocks: result }

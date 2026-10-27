@@ -393,6 +393,13 @@ GET   /api/admin/audit
 GET   /api/admin/dashboard
 ```
 
+The optional `contacts.content.location` field sets the store's OpenStreetMap
+pin and directions destination. Provide both numeric coordinates, for example
+`"location": { "latitude": 53.9, "longitude": 27.56 }`. Latitude must be
+between -85.0511 and 85.0511 and longitude between -180 and 180. Existing
+published contacts without a location remain valid and show a labeled example
+map until coordinates are published.
+
 CMS content uses validated plain text and media asset IDs. Image deletion
 checks product cards, CMS drafts, published blocks and old revisions. The media
 usage recount covers all of them. Audit reads are paginated and filtered by
@@ -435,3 +442,9 @@ specific code such as `INSUFFICIENT_STOCK`, `INVALID_STATUS_TRANSITION`,
 the new reservation, stock, CMS, settings, audit, and dashboard routes.
 
 Integration reference: [NestJS MongoDB documentation](https://docs.nestjs.com/techniques/mongodb).
+
+Public CMS page and block responses include `image` (the resolved public image,
+when present) and `products` (published featured products in the configured
+order) on each block, alongside the existing `content` and `version`. Missing or
+unpublished references are omitted; draft content remains private. Product
+availability and prices reflect the public catalog at the time of the request.
