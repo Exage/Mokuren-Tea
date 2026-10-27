@@ -1,32 +1,44 @@
+import { cmsText, type PublicImage } from '@/app/shared/api/types/cms'
 import Image from 'next/image'
-import { Button } from '@/app/shared/components/button'
+import { Button } from '@mokuren/ui/button'
 import { Description } from '@/app/shared/components/description'
 import { Eyebrow } from '@/app/shared/components/eyebrow'
 import { Title } from '@/app/shared/components/title'
 import styles from './visit.module.css'
 
-export function Visit() {
+export function Visit({
+  content,
+  image,
+}: {
+  content?: Record<string, unknown> | null
+  image?: PublicImage | null
+}) {
   return (
     <section className={styles.visit} aria-labelledby="visit-title">
       <div className={styles.content}>
-        <Eyebrow className={styles.eyebrow}>Visit our store</Eyebrow>
+        <Eyebrow className={styles.eyebrow}>
+          {cmsText(content, 'eyebrow') || 'Visit our store'}
+        </Eyebrow>
         <Title className={styles.title} id="visit-title" size="xl">
-          Reserve online. Collect in person.
+          {cmsText(content, 'title') || 'Reserve online. Collect in person.'}
         </Title>
         <Description className={styles.description}>
-          Find your favorite teas online and collect them at our store.
+          {cmsText(content, 'subtitle') ||
+            'Find your favorite teas online and collect them at our store.'}
         </Description>
 
         <dl className={styles.details}>
           <div className={styles.detail}>
             <dt className={styles.label}>Address</dt>
             <dd className={styles.value}>
-              <address className={styles.address}>12 Calm Lane, Minsk</address>
+              <address className={styles.address}>
+                {cmsText(content, 'address') || '12 Calm Lane, Minsk'}
+              </address>
             </dd>
           </div>
           <div className={styles.detail}>
             <dt className={styles.label}>Opening hours</dt>
-            <dd className={styles.value}>Daily, 10:00–20:00</dd>
+            <dd className={styles.value}>{cmsText(content, 'hours') || 'Daily, 10:00–20:00'}</dd>
           </div>
         </dl>
 
@@ -38,8 +50,12 @@ export function Visit() {
       <div className={styles.photo}>
         <Image
           className={styles.image}
-          src="/images/home/store-shelf.jpg"
-          alt="Glass jars of loose-leaf tea arranged on wooden shelves in a tea boutique"
+          src={image?.url || '/images/home/store-shelf.jpg'}
+          alt={
+            image
+              ? image.alt || ''
+              : 'Glass jars of loose-leaf tea arranged on wooden shelves in a tea boutique'
+          }
           fill
           sizes="(max-width: 560px) calc(100vw - 3.2rem), (max-width: 1024px) calc(100vw - 4.8rem), calc((min(100vw, 1200px) - 7.2rem) * 0.58)"
         />

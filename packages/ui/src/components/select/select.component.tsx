@@ -2,7 +2,7 @@
 
 import type { AriaAttributes } from 'react'
 import clsx from 'clsx'
-import { DropdownTrigger } from '@/app/shared/components/dropdown-trigger'
+import { DropdownTrigger } from '@mokuren/ui/dropdown-trigger'
 import { useSelectHook, type SelectOption } from './select.hook'
 import styles from './select.module.css'
 

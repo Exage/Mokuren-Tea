@@ -1,12 +1,10 @@
-import { MOCK_PRODUCTS } from '@/app/shared/mocks/products'
-
 export const RESERVATION_WEIGHTS = [50, 100, 200] as const
 export const RESERVATION_STORAGE_KEY = 'mokuren-bag'
 
 type ReservationLine = {
   key: string
   id: string
-  weight: (typeof RESERVATION_WEIGHTS)[number]
+  weight: number
   qty: number
 }
 
@@ -20,8 +18,10 @@ export function readReservationBag(): ReservationLine[] {
   return stored.filter((line): line is ReservationLine => {
     return (
       line &&
-      MOCK_PRODUCTS.some((product) => product.id === line.id) &&
-      RESERVATION_WEIGHTS.includes(line.weight) &&
+      typeof line.id === 'string' &&
+      line.id.length > 0 &&
+      Number.isInteger(line.weight) &&
+      line.weight > 0 &&
       Number.isInteger(line.qty) &&
       line.qty > 0 &&
       line.qty <= 9

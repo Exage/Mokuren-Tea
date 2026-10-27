@@ -280,3 +280,11 @@
     transition: none;
   }
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  margin-top: 3.2rem;
+}

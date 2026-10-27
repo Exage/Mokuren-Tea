@@ -1,17 +1,21 @@
 import { useEffect, useId, useState } from 'react'
-import type { Product } from '@/app/shared/interface/product'
-import { addToReservation, RESERVATION_WEIGHTS } from '@/app/shared/utils/reservation-bag'
+import type { PublicProduct } from '@/app/shared/api/types/cms'
+import { addToReservation } from '@/app/shared/utils/reservation-bag'
 
-const PRICE_MULTIPLIERS = { 50: 1, 100: 1.8, 200: 3.2 } as const
-
-export function useProductReservationHook(product: Product) {
+export function useProductReservationHook(product: PublicProduct) {
   const id = useId()
-  const [weight, setWeight] = useState<(typeof RESERVATION_WEIGHTS)[number]>(100)
+  const [weight, setWeight] = useState(
+    product.variants.find((variant) => variant.available)?.weightGrams || 0
+  )
   const [quantity, setQuantity] = useState(1)
   const [feedback, setFeedback] = useState({ message: '', revision: 0 })
-  const price = (product.price * PRICE_MULTIPLIERS[weight]).toFixed(2)
+  const variant = product.variants.find((item) => item.weightGrams === weight && item.available)
+  const price = variant?.price.toFixed(2) || ''
 
   const addToBag = () => {
+    if (!variant) {
+      return
+    }
     try {
       const addedQuantity = addToReservation(product.id, weight, quantity)
       const message = addedQuantity
@@ -46,6 +50,7 @@ export function useProductReservationHook(product: Product) {
     decreaseQuantity: () => setQuantity((previous) => Math.max(1, previous - 1)),
     increaseQuantity: () => setQuantity((previous) => Math.min(9, previous + 1)),
     price,
+    variant,
     addToBag,
     message: feedback.message,
   }

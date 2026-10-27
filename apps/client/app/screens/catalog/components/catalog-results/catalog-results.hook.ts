@@ -1,119 +1,101 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type MouseEvent, type SyntheticEvent } from 'react'
-import { MOCK_PRODUCTS } from '@/app/shared/mocks/products'
+import { useQuery } from '@tanstack/react-query'
+import { catalogQueryOptions } from '@/app/shared/api/queries/catalog'
+import type { CatalogFilter, CatalogInitialData } from '@/app/shared/api/types/catalog'
 
-export const CATEGORIES = [
-  'All Teas',
-  'Green Tea',
-  'Black Tea',
-  'Oolong',
-  'Pu-erh',
-  'Herbal',
-  'Fruit Infusions',
-]
-export const TASTES = [
-  'Floral',
-  'Earthy',
-  'Sweet',
-  'Fresh',
-  'Nutty',
-  'Fruity',
-  'Bold',
-  'Grassy',
-  'Creamy',
-]
-export type CatalogSort = 'featured' | 'price-asc' | 'price-desc' | 'name'
-
+export type CatalogSort = 'new' | 'price-asc' | 'price-desc'
 export const SORT_OPTIONS = [
-  { value: 'featured', label: 'Featured' },
+  { value: 'new', label: 'Newest' },
   { value: 'price-asc', label: 'Price: Low to High' },
   { value: 'price-desc', label: 'Price: High to Low' },
-  { value: 'name', label: 'Name: A to Z' },
 ] as const
 
-export function useCatalogResultsHook() {
+export function useCatalogResultsHook(initial: CatalogInitialData) {
   const id = useId()
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('All Teas')
-  const [minPrice, setMinPrice] = useState('0')
-  const [maxPrice, setMaxPrice] = useState('30')
+  const [search, setSearch] = useState('')
+  const [category, setCategory] = useState('')
+  const [minPrice, setMinPrice] = useState('')
+  const [maxPrice, setMaxPrice] = useState('')
+  const [priceFilter, setPriceFilter] = useState<{ minPrice?: number; maxPrice?: number }>({})
   const [tastes, setTastes] = useState<string[]>([])
-  const [sort, setSort] = useState<CatalogSort>('featured')
+  const [sort, setSort] = useState<CatalogSort>('new')
+  const [page, setPage] = useState(1)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const drawerRef = useRef<HTMLDialogElement>(null)
 
-  const firstPrice = Math.max(0, Math.min(30, Number(minPrice) || 0))
-  const secondPrice = Math.max(0, Math.min(30, maxPrice.trim() ? Number(maxPrice) || 0 : 30))
-  const lowerPrice = Math.min(firstPrice, secondPrice)
-  const upperPrice = Math.max(firstPrice, secondPrice)
-  const hasPriceFilter = lowerPrice > 0 || upperPrice < 30
-  const filterCount = Number(hasPriceFilter) + tastes.length
-  const hasFilters = Boolean(query.trim() || category !== 'All Teas' || filterCount)
-  const search = query.trim().toLowerCase()
-  const products = MOCK_PRODUCTS.filter((product) => {
-    const searchable = [
-      product.name,
-      product.category,
-      product.origin,
-      product.description,
-      ...product.tastes,
-    ]
-      .join(' ')
-      .toLowerCase()
-    return (
-      (!search || searchable.includes(search)) &&
-      (category === 'All Teas' || category === product.category) &&
-      product.price >= lowerPrice &&
-      product.price <= upperPrice &&
-      tastes.every((taste) => product.tastes.includes(taste))
-    )
-  })
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(query.trim())
+      setPage(1)
+    }, 300)
+    return () => window.clearTimeout(timer)
+  }, [query])
 
-  if (sort === 'price-asc') {
-    products.sort((a, b) => a.price - b.price)
-  } else if (sort === 'price-desc') {
-    products.sort((a, b) => b.price - a.price)
-  } else if (sort === 'name') {
-    products.sort((a, b) => a.name.localeCompare(b.name, 'en'))
+  const filter: CatalogFilter = {
+    ...(search && { search }),
+    ...(category && { category }),
+    ...(tastes.length > 0 && { tastes: [...tastes].sort() }),
+    ...priceFilter,
+    ...(sort !== 'new' && { sort }),
+    ...(page > 1 && { page }),
   }
+  const isDefault = Object.keys(filter).length === 0
+  const result = useQuery({
+    ...catalogQueryOptions(filter),
+    initialData: isDefault ? initial.products : undefined,
+  })
+  const filterCount = Number(Boolean(minPrice || maxPrice)) + tastes.length
+  const hasFilters = Boolean(query.trim() || category || filterCount || sort !== 'new')
 
   const normalizePrices = () => {
-    setMinPrice(String(lowerPrice))
-    setMaxPrice(String(upperPrice))
+    const parse = (value: string) => {
+      const number = Number(value)
+      return value.trim() && Number.isFinite(number) && number >= 0
+        ? Math.round(number * 100) / 100
+        : undefined
+    }
+    let lower = parse(minPrice)
+    let upper = parse(maxPrice)
+    if (lower !== undefined && upper !== undefined && lower > upper) {
+      ;[lower, upper] = [upper, lower]
+    }
+    setMinPrice(lower === undefined ? '' : String(lower))
+    setMaxPrice(upper === undefined ? '' : String(upper))
+    setPriceFilter({
+      ...(lower !== undefined && { minPrice: lower }),
+      ...(upper !== undefined && { maxPrice: upper }),
+    })
+    setPage(1)
   }
-
   const toggleTaste = (taste: string) => {
     setTastes((previous) =>
       previous.includes(taste) ? previous.filter((value) => value !== taste) : [...previous, taste]
     )
+    setPage(1)
   }
-
   const clearFilters = () => {
     setQuery('')
-    setCategory('All Teas')
-    setMinPrice('0')
-    setMaxPrice('30')
+    setSearch('')
+    setCategory('')
+    setMinPrice('')
+    setMaxPrice('')
+    setPriceFilter({})
     setTastes([])
-    setSort('featured')
+    setSort('new')
+    setPage(1)
   }
-
-  const openDrawer = () => {
-    setIsDrawerOpen(true)
-  }
-
   const closeDrawer = () => setIsDrawerOpen(false)
-
   const cancelDrawer = (event: SyntheticEvent<HTMLDialogElement>) => {
     event.preventDefault()
     closeDrawer()
   }
-
   const dismissDrawer = (event: MouseEvent<HTMLDialogElement>) => {
     if (event.target !== event.currentTarget) {
       return
     }
-
     const bounds = event.currentTarget.getBoundingClientRect()
     if (
       event.clientX < bounds.left ||
@@ -124,12 +106,10 @@ export function useCatalogResultsHook() {
       closeDrawer()
     }
   }
-
   useEffect(() => {
     if (!isDrawerOpen) {
       return
     }
-
     const drawer = drawerRef.current
     drawer?.showModal()
     const root = document.documentElement
@@ -146,7 +126,10 @@ export function useCatalogResultsHook() {
     query,
     setQuery,
     category,
-    setCategory,
+    setCategory: (value: string) => {
+      setCategory(value)
+      setPage(1)
+    },
     minPrice,
     setMinPrice,
     maxPrice,
@@ -154,14 +137,19 @@ export function useCatalogResultsHook() {
     tastes,
     toggleTaste,
     sort,
-    setSort,
+    setSort: (value: CatalogSort) => {
+      setSort(value)
+      setPage(1)
+    },
     isDrawerOpen,
-    openDrawer,
+    openDrawer: () => setIsDrawerOpen(true),
     closeDrawer,
     cancelDrawer,
     dismissDrawer,
     drawerRef,
-    products,
+    result,
+    page,
+    setPage,
     filterCount,
     hasFilters,
     normalizePrices,

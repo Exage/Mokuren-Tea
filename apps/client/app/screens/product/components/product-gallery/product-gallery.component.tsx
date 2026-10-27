@@ -1,11 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import type { Product } from '@/app/shared/interface/product'
+import type { PublicProduct } from '@/app/shared/api/types/cms'
 import { useProductGalleryHook } from './product-gallery.hook'
 import styles from './product-gallery.module.css'
 
-export function ProductGallery({ product }: { product: Product }) {
+export function ProductGallery({ product }: { product: PublicProduct }) {
   const { images, selectedIndex, carouselId, carouselRef, scrollTo, handleKeyDown } =
     useProductGalleryHook(product)
 

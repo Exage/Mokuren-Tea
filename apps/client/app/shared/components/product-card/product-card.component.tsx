@@ -2,11 +2,11 @@ import clsx from 'clsx'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Title } from '@/app/shared/components/title'
-import type { Product } from '@/app/shared/interface/product'
+import type { PublicProduct } from '@/app/shared/api/types/cms'
 import styles from './product-card.module.css'
 
 type ProductCardProps = {
-  product: Product
+  product: PublicProduct
   className?: string
   sizes?: string
 }
@@ -21,8 +21,8 @@ export function ProductCard({
       <Link className={styles.link} href={`/catalog/${product.slug}`}>
         <Image
           className={styles.image}
-          src={product.image}
-          alt={`${product.name} tea`}
+          src={product.images[0]?.url || '/images/tea-placeholder.svg'}
+          alt={product.images[0]?.alt || ''}
           fill
           sizes={sizes}
         />
@@ -30,10 +30,10 @@ export function ProductCard({
           <Title className={styles.title} size="md">
             {product.name}
           </Title>
-          <p className={styles.price}>
-            from {product.price.toFixed(2)} BYN{' '}
-            <span className={styles.weight}>/ {product.weightGrams} g</span>
-          </p>
+          {product.minPrice !== null && (
+            <p className={styles.price}>from {product.minPrice.toFixed(2)} BYN</p>
+          )}
+          {product.outOfStock && <p>Out of stock</p>}
         </div>
       </Link>
     </article>

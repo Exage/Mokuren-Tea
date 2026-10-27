@@ -24,6 +24,11 @@ app/
         index.ts
         container.component.tsx
         container.module.css
+packages/ui/src/components/
+  input/
+    index.ts
+    input.component.tsx
+    input.module.css
 ```
 
 `layout.tsx` owns document metadata, the document shell, and the
@@ -54,7 +59,8 @@ file structure:
 - Custom hooks use `use<Name>Hook`, such as `useHomeScreenHook` or
   `useProductCardHook`. Keep hooks without JSX in `.ts` files.
 - Import a component's CSS Module as `styles` in its `.component.tsx` file.
-- Import components using the `@/` alias, which points to the client project root.
+- Import storefront components using the `@/` alias, which points to the client
+  project root. Import shared controls from `@mokuren/ui/<name>`.
 - Keep small prop types in the component or hook. Add separate types or constants
   files only when their size or reuse justifies it.
 
@@ -96,6 +102,11 @@ prefixes are not required. Scope element selectors under a local class and avoid
 
 Put shared styles in `app/shared/styles/`. Its `globals.css` contains only shared
 CSS variables, resets, typography defaults, and document-wide accessibility defaults.
+Brand colors, radii, and shadows are imported from `@mokuren/ui/tokens.css`.
+Button, Select, DropdownTrigger, and Input live in `packages/ui` and are
+imported via `@mokuren/ui/<name>`. Storefront components such as Header, Footer,
+ProductCard, Container, Description, Eyebrow, and Title remain in
+`app/shared/components/`.
 Import it once from the root layout. Add other shared stylesheets in this directory
 when needed; shared class-based styles can use CSS Modules as well. Keep styles
 owned by a component in that component's folder.
@@ -128,7 +139,8 @@ sizes independent of the existing semantic heading elements.
 | Screen                                  | `app/screens/<name>/`                   |
 | UI used only by one screen              | `app/screens/<name>/components/<name>/` |
 | Pure screen-specific logic              | `app/screens/<name>/lib/`               |
-| Application-wide UI                     | `app/shared/components/<name>/`         |
+| Storefront-wide UI                      | `app/shared/components/<name>/`         |
+| Cross-application form controls         | `packages/ui/src/components/<name>/`    |
 | Reusable React hooks                    | `app/shared/hooks/`                     |
 | Shared styles                           | `app/shared/styles/`                    |
 | Reused constants                        | `app/shared/constants/`                 |
@@ -145,6 +157,10 @@ Use the shared `Select` component for single-value dropdowns. Pass `value`,
 styled list, keyboard navigation, and dismissal behavior. Use `DropdownTrigger`
 for dropdowns with custom content, such as price fields or multiple taste filters,
 so their button and chevron match the select.
+
+`Input` forwards native input props and refs. Catalog search and price filters use
+it as controlled fields, so their existing query and validation behavior remains
+in their screen hooks.
 
 `useWindowSizeHook` from `@/app/shared/hooks` returns the current viewport `width`
 and `height` in CSS pixels and updates them on window resize. Both values are

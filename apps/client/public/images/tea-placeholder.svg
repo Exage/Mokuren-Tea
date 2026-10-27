@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 680" role="img" aria-label="Tea illustration">
+  <rect width="800" height="680" fill="#e9eee4"/>
+  <circle cx="400" cy="320" r="210" fill="#d7e1d1"/>
+  <path d="M264 360h272c-8 88-64 142-136 142s-128-54-136-142Z" fill="#728a72"/>
+  <path d="M536 376h22c53 0 53 78-34 82" fill="none" stroke="#728a72" stroke-width="20" stroke-linecap="round"/>
+  <path d="M250 523h300" fill="none" stroke="#526e58" stroke-width="14" stroke-linecap="round"/>
+  <path d="M367 321c-22-26-23-48 0-75m65 75c-22-26-23-48 0-75" fill="none" stroke="#9aac98" stroke-width="12" stroke-linecap="round"/>
+  <path d="M401 235c-1-44 23-78 66-92 2 44-22 79-66 92Zm0 0c0-35-22-60-58-70 0 35 20 60 58 70Z" fill="#728a72"/>
+</svg>

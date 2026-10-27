@@ -1,16 +1,6 @@
-:root {
-  --color-background: #ffffff;
-  --color-surface: #f6f7f4;
-  --color-sage: #b6c3a2;
-  --color-sage-soft: #e3e9d8;
-  --color-primary: #607b60;
-  --color-primary-dark: #4c6350;
-  --color-text: #333d32;
-  --color-text-muted: #6e7568;
-  --color-border: #e4e7de;
-  --color-accent-soft: #edf2e7;
-  --color-on-primary: #ffffff;
+@import '@mokuren/ui/tokens.css';
 
+:root {
   --header-height: 8.8rem;
   --header-height-scrolled: 6rem;
 
@@ -21,9 +11,6 @@
   --font-size-title-product: 5.4rem;
   --font-size-quote: 2.6rem;
 
-  --border-radius-sm: 0.8rem;
-  --border-radius: 1.2rem;
-  --shadow-elevated: 0 1.2rem 3.2rem rgb(51 61 50 / 10%);
   color-scheme: light;
 }
 

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 import clsx from 'clsx'
 import { Cormorant_Garamond, Inter } from 'next/font/google'
 import { Header } from '@/app/shared/components/header'
@@ -28,7 +28,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={clsx(headingFont.variable, bodyFont.variable)}>
       <body className={styles.body}>
-        <Header />
+        <Suspense fallback={null}>
+          <Header />
+        </Suspense>
 
         {children}
 

@@ -1,4 +1,5 @@
-import { TASTES } from '../catalog-results/catalog-results.hook'
+import type { CatalogOption } from '@/app/shared/api/types/catalog'
+import { Input } from '@mokuren/ui/input'
 import styles from './filter-fields.module.css'
 
 type FilterFieldsProps = {
@@ -6,6 +7,7 @@ type FilterFieldsProps = {
   minPrice: string
   maxPrice: string
   tastes: string[]
+  tasteOptions: CatalogOption[]
   onMinPriceChange: (value: string) => void
   onMaxPriceChange: (value: string) => void
   onPriceBlur: () => void
@@ -17,6 +19,7 @@ export function FilterFields({
   minPrice,
   maxPrice,
   tastes,
+  tasteOptions,
   onMinPriceChange,
   onMaxPriceChange,
   onPriceBlur,
@@ -26,12 +29,11 @@ export function FilterFields({
     <div className={styles.fields}>
       {group !== 'taste' && (
         <fieldset className={styles.group}>
-          <legend className={styles.legend}>Price, BYN / 50 g</legend>
+          <legend className={styles.legend}>Price, BYN</legend>
           <div className={styles.prices}>
-            <input
+            <Input
               type="number"
               min="0"
-              max="30"
               step="0.1"
               value={minPrice}
               aria-label="Minimum price"
@@ -39,10 +41,9 @@ export function FilterFields({
               onBlur={onPriceBlur}
             />
             <span aria-hidden="true">–</span>
-            <input
+            <Input
               type="number"
               min="0"
-              max="30"
               step="0.1"
               value={maxPrice}
               aria-label="Maximum price"
@@ -56,15 +57,15 @@ export function FilterFields({
         <fieldset className={styles.group}>
           <legend className={styles.legend}>Taste notes</legend>
           <div className={styles.chips}>
-            {TASTES.map((taste) => (
+            {tasteOptions.map((taste) => (
               <button
-                key={taste}
+                key={taste.id}
                 type="button"
                 className={styles.chip}
-                aria-pressed={tastes.includes(taste)}
-                onClick={() => onTasteToggle(taste)}
+                aria-pressed={tastes.includes(taste.id)}
+                onClick={() => onTasteToggle(taste.id)}
               >
-                {taste}
+                {taste.name}
               </button>
             ))}
           </div>

@@ -1,12 +1,11 @@
 'use client'
 
-import { Button } from '@/app/shared/components/button'
-import type { Product } from '@/app/shared/interface/product'
-import { RESERVATION_WEIGHTS } from '@/app/shared/utils/reservation-bag'
+import { Button } from '@mokuren/ui/button'
+import type { PublicProduct } from '@/app/shared/api/types/cms'
 import { useProductReservationHook } from './product-reservation.hook'
 import styles from './product-reservation.module.css'
 
-export function ProductReservation({ product }: { product: Product }) {
+export function ProductReservation({ product }: { product: PublicProduct }) {
   const {
     id,
     weight,
@@ -15,6 +14,7 @@ export function ProductReservation({ product }: { product: Product }) {
     decreaseQuantity,
     increaseQuantity,
     price,
+    variant,
     addToBag,
     message,
   } = useProductReservationHook(product)
@@ -22,22 +22,29 @@ export function ProductReservation({ product }: { product: Product }) {
   return (
     <>
       <p className={styles.price} aria-live="polite" aria-atomic="true">
-        {price} BYN <span>/ {weight} g</span>
+        {variant ? (
+          <>
+            {price} BYN <span>/ {weight} g</span>
+          </>
+        ) : (
+          'Out of stock'
+        )}
       </p>
 
       <div className={styles.label} id={`${id}-packaging`}>
         Packaging
       </div>
       <div className={styles.weights} role="group" aria-labelledby={`${id}-packaging`}>
-        {RESERVATION_WEIGHTS.map((grams) => (
+        {product.variants.map((item) => (
           <button
-            key={grams}
+            key={item.variantId}
             type="button"
             className={styles.weight}
-            aria-pressed={weight === grams}
-            onClick={() => setWeight(grams)}
+            aria-pressed={weight === item.weightGrams}
+            disabled={!item.available}
+            onClick={() => setWeight(item.weightGrams)}
           >
-            {grams} g
+            {item.weightGrams} g
           </button>
         ))}
       </div>
@@ -67,7 +74,7 @@ export function ProductReservation({ product }: { product: Product }) {
             +
           </button>
         </div>
-        <Button className={styles.add} type="button" onClick={addToBag}>
+        <Button className={styles.add} type="button" disabled={!variant} onClick={addToBag}>
           Add to Reservation
         </Button>
       </div>

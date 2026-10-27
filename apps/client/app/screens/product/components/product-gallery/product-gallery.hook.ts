@@ -1,14 +1,14 @@
 import { useEffect, useId, useState, type KeyboardEvent } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
-import type { Product } from '@/app/shared/interface/product'
+import type { PublicProduct } from '@/app/shared/api/types/cms'
 
-export function useProductGalleryHook(product: Product) {
+export function useProductGalleryHook(product: PublicProduct) {
   const carouselId = useId()
-  const images = [
-    { src: product.image, alt: `${product.name} product photograph`, label: 'Product photograph' },
-    { src: '/images/products/tea-cup.jpg', alt: 'Brewed cup of tea', label: 'Brewed cup detail' },
-    { src: '/images/about/about.jpg', alt: 'A quiet tea ritual', label: 'Tea ritual detail' },
-  ]
+  const images = product.images.map((image, index) => ({
+    src: image.url,
+    alt: image.alt || '',
+    label: `Product image ${index + 1}`,
+  }))
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [carouselRef, carouselApi] = useEmblaCarousel({
     loop: true,

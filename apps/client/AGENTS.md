@@ -28,8 +28,10 @@ screens, components, hooks, or styles. Root repository rules also apply.
   or explicit `padding-left` and `padding-right` declarations instead.
 - Put shared styles in `app/shared/styles/`. Keep `globals.css` there limited to
   tokens, resets, and document-wide defaults, and import it from the root layout.
-- Put screen-specific components in the screen's `components/` folder. Put
-  application-wide UI in `app/shared/components/`.
+- Put screen-specific components in the screen's `components/` folder. Keep
+  storefront-wide components in `app/shared/components/`. Reusable controls
+  Button, Select, DropdownTrigger, and Input live in `packages/ui/src/components/`
+  and are imported through `@mokuren/ui/<name>`.
 - Keep components server-rendered by default. Add `'use client'` to an interactive
   component that uses hooks, event handlers, or browser APIs.
 - Do not import backend source code into the frontend. Add explicit request functions
