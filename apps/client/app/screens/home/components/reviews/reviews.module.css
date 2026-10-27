@@ -17,7 +17,7 @@
 
 .title {
   margin-top: 1rem;
-  font-size: clamp(3rem, 3.2vw, 4.2rem);
+  font-size: var(--font-size-title-lg);
 }
 
 .viewport {
@@ -38,7 +38,7 @@
 .quote {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: clamp(2.2rem, 2vw, 2.6rem);
+  font-size: var(--font-size-quote);
 }
 
 .quote p {

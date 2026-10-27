@@ -100,6 +100,26 @@ Import it once from the root layout. Add other shared stylesheets in this direct
 when needed; shared class-based styles can use CSS Modules as well. Keep styles
 owned by a component in that component's folder.
 
+### Typography
+
+Heading and quote sizes use shared `rem` tokens in `globals.css`. Sizes change
+only at the existing 1024px and 560px breakpoints; do not use viewport units or
+`clamp()` for font sizes. Body text, labels, and controls keep their existing
+component sizes.
+
+| Role                                               | Desktop (>1024px) | Tablet (561–1024px) | Mobile (≤560px) |
+| -------------------------------------------------- | ----------------- | ------------------- | --------------- |
+| Hero (`3xl`)                                       | 6.8rem            | 5.6rem              | 4.4rem          |
+| Page heading (`2xl`)                               | 6rem              | 4.8rem              | 4rem            |
+| Section heading (`xl`)                             | 4.8rem            | 4rem                | 3.2rem          |
+| Compact heading (`lg`), reviews and visit sections | 4.2rem            | 3.6rem              | 3rem            |
+| Product page heading                               | 5.4rem            | 4.4rem              | 3.6rem          |
+| Review quote                                       | 2.6rem            | 2.4rem              | 2.2rem          |
+
+About, catalog, and contacts share the page-heading scale. Product headings use
+a smaller scale for longer names in the two-column layout. Keep these visual
+sizes independent of the existing semantic heading elements.
+
 ## Where new code belongs
 
 | Code                                    | Location                                |

@@ -9,19 +9,19 @@
 }
 
 .size3xl {
-  font-size: clamp(4.4rem, 5vw, 6.8rem);
+  font-size: var(--font-size-title-3xl);
 }
 
 .size2xl {
-  font-size: clamp(4rem, 4.6vw, 6rem);
+  font-size: var(--font-size-title-2xl);
 }
 
 .sizeXl {
-  font-size: clamp(3.2rem, 3.6vw, 4.8rem);
+  font-size: var(--font-size-title-xl);
 }
 
 .sizeLg {
-  font-size: clamp(3rem, 3.2vw, 4.2rem);
+  font-size: var(--font-size-title-lg);
 }
 
 .sizeMd {

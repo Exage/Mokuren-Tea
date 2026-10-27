@@ -40,7 +40,7 @@
 
 .title {
   margin: 0.8rem 0;
-  font-size: clamp(3.6rem, 4vw, 5.4rem);
+  font-size: var(--font-size-title-product);
 }
 
 .tastes {

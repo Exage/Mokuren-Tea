@@ -16,7 +16,7 @@ export function ContactsScreen() {
       <Container>
         <section aria-labelledby="contacts-title">
           <Eyebrow className={styles.eyebrow}>Contacts</Eyebrow>
-          <Title className={styles.title} id="contacts-title" size="2xl">
+          <Title id="contacts-title" size="2xl">
             Come say hello.
           </Title>
 

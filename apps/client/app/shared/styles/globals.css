@@ -14,10 +14,39 @@
   --header-height: 8.8rem;
   --header-height-scrolled: 6rem;
 
+  --font-size-title-3xl: 6.8rem;
+  --font-size-title-2xl: 6rem;
+  --font-size-title-xl: 4.8rem;
+  --font-size-title-lg: 4.2rem;
+  --font-size-title-product: 5.4rem;
+  --font-size-quote: 2.6rem;
+
   --border-radius-sm: 0.8rem;
   --border-radius: 1.2rem;
   --shadow-elevated: 0 1.2rem 3.2rem rgb(51 61 50 / 10%);
   color-scheme: light;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --font-size-title-3xl: 5.6rem;
+    --font-size-title-2xl: 4.8rem;
+    --font-size-title-xl: 4rem;
+    --font-size-title-lg: 3.6rem;
+    --font-size-title-product: 4.4rem;
+    --font-size-quote: 2.4rem;
+  }
+}
+
+@media (max-width: 560px) {
+  :root {
+    --font-size-title-3xl: 4.4rem;
+    --font-size-title-2xl: 4rem;
+    --font-size-title-xl: 3.2rem;
+    --font-size-title-lg: 3rem;
+    --font-size-title-product: 3.6rem;
+    --font-size-quote: 2.2rem;
+  }
 }
 
 *,

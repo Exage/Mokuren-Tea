@@ -21,7 +21,6 @@
 
 .title {
   margin-bottom: 1.6rem;
-  font-size: clamp(4rem, 4.6vw, 6.4rem);
 }
 
 .description {
