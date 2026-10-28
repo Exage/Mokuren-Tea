@@ -10,37 +10,50 @@ import type { AdminUserDocument } from './schemas/admin-user.schema.js'
 @Injectable()
 export class AdminUserRepository {
   constructor(
-    @InjectModel(AdminUser.name) private readonly adminUserModel: Model<AdminUserDocument>,
+    @InjectModel(AdminUser.name) private readonly adminUserModel: Model<AdminUserDocument>
   ) {}
 
   async initializeMutationGuard(): Promise<void> {
-    await this.adminUserModel.db.collection('admin_mutation_locks').updateOne(
-      { _id: new Types.ObjectId('000000000000000000000000') },
-      { $setOnInsert: { revision: 0 } },
-      { upsert: true },
-    )
+    await this.adminUserModel.db
+      .collection('admin_mutation_locks')
+      .updateOne(
+        { _id: new Types.ObjectId('000000000000000000000000') },
+        { $setOnInsert: { revision: 0 } },
+        { upsert: true }
+      )
   }
 
   async acquireMutationGuard(session: ClientSession): Promise<void> {
     // A real write forces competing transactions to retry with a fresh
     // snapshot. MongoDB releases the write lock on commit, abort, or crash.
-    await this.adminUserModel.db.collection('admin_mutation_locks').updateOne(
-      { _id: new Types.ObjectId('000000000000000000000000') },
-      { $inc: { revision: 1 } },
-      { session },
-    )
+    await this.adminUserModel.db
+      .collection('admin_mutation_locks')
+      .updateOne(
+        { _id: new Types.ObjectId('000000000000000000000000') },
+        { $inc: { revision: 1 } },
+        { session }
+      )
   }
 
   findById(id: string, session?: ClientSession) {
-    return this.adminUserModel.findById(id).session(session || null).exec()
+    return this.adminUserModel
+      .findById(id)
+      .session(session || null)
+      .exec()
   }
 
-  findByNormalizedEmail(normalizedEmail: string, session?: ClientSession) {
-    return this.adminUserModel.findOne({ normalizedEmail }).session(session || null).exec()
+  findByNormalizedLogin(normalizedLogin: string, session?: ClientSession) {
+    return this.adminUserModel
+      .findOne({ normalizedEmail: normalizedLogin })
+      .session(session || null)
+      .exec()
   }
 
   countActiveExcluding(session: ClientSession, excludeId: Types.ObjectId) {
-    return this.adminUserModel.countDocuments({ _id: { $ne: excludeId }, isActive: true }).session(session || null).exec()
+    return this.adminUserModel
+      .countDocuments({ _id: { $ne: excludeId }, isActive: true })
+      .session(session || null)
+      .exec()
   }
 
   async listAdmin(page: number, limit: number, search?: string) {

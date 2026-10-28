@@ -88,6 +88,18 @@ health, and product domain rules without requiring MongoDB. The separate
 (transactions included, no Docker needed).
 `db:down` stops the local database and retains its data volume.
 
+## Administrator logins
+
+`admin:create` prompts for a login, display name, and password. Logins do not
+need to be email addresses (for example, `store-admin`). They are trimmed,
+case-insensitive, and limited to 300 characters. API creation and sign-in accept
+`login` instead of `email`; administrator responses expose `login` as well.
+
+Existing accounts keep their previous identifier as their login. The internal
+MongoDB paths `email` and `normalizedEmail`, including the unique index, are
+retained to preserve existing accounts without migrating credentials or sessions.
+These paths now store login identifiers and are not exposed by the API.
+
 ## Health check
 
 `GET /api/health` sends a MongoDB ping and returns:

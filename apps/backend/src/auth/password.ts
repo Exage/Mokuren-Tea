@@ -25,7 +25,7 @@ export const DEFAULT_PASSWORD_MAX_LENGTH = 128
 export function validatePassword(
   password: string,
   minLength: number = DEFAULT_PASSWORD_MIN_LENGTH,
-  maxLength: number = DEFAULT_PASSWORD_MAX_LENGTH,
+  maxLength: number = DEFAULT_PASSWORD_MAX_LENGTH
 ): void {
   if (password.length < minLength) {
     throw new Error(`password must be at least ${minLength} characters`)
@@ -90,19 +90,22 @@ export function parseCredential(stored: string): HashedPassword | null {
   return { salt: stored.slice(0, separator), hash: stored.slice(separator + 1) }
 }
 
-// Normalize an email for login and uniqueness: trim surrounding whitespace and
-// lowercase. Dots and `+` suffixes are preserved (only case and surrounding
-// whitespace change). Passwords are never trimmed or modified.
-export function normalizeEmail(value: unknown): string {
+// Logins are case-insensitive and do not need to be email addresses. Preserve
+// all characters except surrounding whitespace; passwords are never modified.
+export function normalizeLogin(value: unknown): string {
   if (typeof value !== 'string') {
-    throw new Error('email must be a string')
+    throw new Error('login must be a string')
   }
 
-  const email = value.trim().toLowerCase()
+  const login = value.trim().toLowerCase()
 
-  if (email.length === 0) {
-    throw new Error('email is required')
+  if (login.length === 0) {
+    throw new Error('login is required')
   }
 
-  return email
+  if (login.length > 300) {
+    throw new Error('login must not exceed 300 characters')
+  }
+
+  return login
 }

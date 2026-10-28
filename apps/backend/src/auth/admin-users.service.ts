@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common'
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common'
 import { InjectConnection } from '@nestjs/mongoose'
 import { ConfigService } from '@nestjs/config'
 import { randomBytes } from 'node:crypto'
@@ -7,7 +13,7 @@ import type { ClientSession, Connection } from 'mongoose'
 import { AdminUserRepository } from './admin-user.repository.js'
 import { AdminSessionRepository } from './admin-session.repository.js'
 import { AuditService } from '../audit/audit.service.js'
-import { hashPassword, encodeCredential, normalizeEmail, validatePassword } from './password.js'
+import { hashPassword, encodeCredential, normalizeLogin, validatePassword } from './password.js'
 import { AdminUser } from './schemas/admin-user.schema.js'
 import type { AdminUserDocument } from './schemas/admin-user.schema.js'
 
@@ -29,19 +35,21 @@ function generateTemporaryPassword(): string {
 function validateNewPassword(password: string, config: ConfigService): void {
   validatePassword(
     password,
-    Number.isInteger(Number(config.get('PASSWORD_MIN_LENGTH'))) && Number(config.get('PASSWORD_MIN_LENGTH')) > 0
+    Number.isInteger(Number(config.get('PASSWORD_MIN_LENGTH'))) &&
+      Number(config.get('PASSWORD_MIN_LENGTH')) > 0
       ? Number(config.get('PASSWORD_MIN_LENGTH'))
       : 8,
-    Number.isInteger(Number(config.get('PASSWORD_MAX_LENGTH'))) && Number(config.get('PASSWORD_MAX_LENGTH')) > 0
+    Number.isInteger(Number(config.get('PASSWORD_MAX_LENGTH'))) &&
+      Number(config.get('PASSWORD_MAX_LENGTH')) > 0
       ? Number(config.get('PASSWORD_MAX_LENGTH'))
-      : 128,
+      : 128
   )
 }
 
 function toSafeUser(user: AdminUserDocument) {
   return {
     id: String(user._id),
-    email: user.normalizedEmail,
+    login: user.normalizedEmail,
     displayName: user.displayName,
     isActive: user.isActive === true,
     mustChangePassword: user.mustChangePassword === true,
@@ -58,7 +66,7 @@ export class AdminUsersService {
     private readonly adminSessionRepository: AdminSessionRepository,
     private readonly auditService: AuditService,
     @InjectConnection() private readonly connection: Connection,
-    private readonly config: ConfigService,
+    private readonly config: ConfigService
   ) {}
 
   private async runInTransaction<T>(work: (session: ClientSession) => Promise<T>): Promise<T> {
@@ -88,36 +96,47 @@ export class AdminUsersService {
   async listUsers(
     page: number,
     limit: number,
-    search?: string,
-  ): Promise<{ items: AdminUserDocument[]; totalItems: number }> {
+    search?: string
+  ): Promise<{ items: ReturnType<typeof toSafeUser>[]; totalItems: number }> {
     const { docs, totalItems } = await this.adminUserRepository.listAdmin(page, limit, search)
 
-    return { items: docs, totalItems }
+    return { items: docs.map(toSafeUser), totalItems }
   }
 
   async createUser(
-    email: unknown,
+    login: unknown,
     displayName: unknown,
     actorId: string | null,
-    password?: string,
+    password?: string
   ): Promise<{
     user: ReturnType<typeof toSafeUser>
     temporaryPassword?: string
     temporaryPasswordExpiresAt?: Date
   }> {
-    const normalizedEmail = normalizeEmail(email)
+    let normalizedLogin: string
+    try {
+      normalizedLogin = normalizeLogin(login)
+    } catch (error) {
+      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: (error as Error).message })
+    }
     const name =
       typeof displayName === 'string' && displayName.trim().length > 0 ? displayName.trim() : ''
 
     if (name.length === 0) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'displayName is required' })
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'displayName is required',
+      })
     }
 
     return this.runInTransaction(async (session) => {
-      const existing = await this.adminUserRepository.findByNormalizedEmail(normalizedEmail, session)
+      const existing = await this.adminUserRepository.findByNormalizedLogin(
+        normalizedLogin,
+        session
+      )
 
       if (existing) {
-        throw new ConflictException({ code: 'CONFLICT', message: 'Email address is already in use' })
+        throw new ConflictException({ code: 'CONFLICT', message: 'Login is already in use' })
       }
 
       let passwordHash: string
@@ -148,7 +167,7 @@ export class AdminUsersService {
         passwordHash = encodeCredential(hash, salt)
         mustChangePassword = true
         temporaryPasswordExpiresAt = new Date(
-          Date.now() + temporaryPasswordExpiryHours(this.config) * 60 * 60 * 1000,
+          Date.now() + temporaryPasswordExpiryHours(this.config) * 60 * 60 * 1000
         )
       }
 
@@ -157,8 +176,8 @@ export class AdminUsersService {
       const created = await this.adminUserRepository.create(
         {
           _id: userId,
-          email: normalizedEmail,
-          normalizedEmail,
+          email: normalizedLogin,
+          normalizedEmail: normalizedLogin,
           displayName: name,
           passwordHash,
           mustChangePassword,
@@ -167,7 +186,7 @@ export class AdminUsersService {
           createdBy: actorId ? new Types.ObjectId(actorId) : null,
           lastLoginAt: null,
         } as unknown as AdminUser,
-        session,
+        session
       )
 
       await this.auditService.record(
@@ -176,9 +195,9 @@ export class AdminUsersService {
           action: 'admin-user.created',
           entityType: 'admin-user',
           entityId: String(userId),
-          changes: { email: normalizedEmail, displayName: name, isActive: true },
+          changes: { login: normalizedLogin, displayName: name, isActive: true },
         },
-        session,
+        session
       )
 
       return {
@@ -192,10 +211,13 @@ export class AdminUsersService {
   async updateUser(
     id: string,
     dto: { displayName?: unknown; isActive?: unknown },
-    actorId: string | null,
+    actorId: string | null
   ): Promise<ReturnType<typeof toSafeUser>> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'userId must be a valid ObjectId' })
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'userId must be a valid ObjectId',
+      })
     }
 
     const hasDisplayName = dto.displayName !== undefined
@@ -224,7 +246,10 @@ export class AdminUsersService {
       if (hasDisplayName) {
         const name = typeof dto.displayName === 'string' ? dto.displayName.trim() : ''
         if (name.length === 0) {
-          throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'displayName must be a string' })
+          throw new BadRequestException({
+            code: 'VALIDATION_ERROR',
+            message: 'displayName must be a string',
+          })
         }
         if (name !== user.displayName) {
           user.displayName = name
@@ -245,7 +270,7 @@ export class AdminUsersService {
           // deactivations, including after a transaction retry.
           const activeOthers = await this.adminUserRepository.countActiveExcluding(
             session,
-            user._id,
+            user._id
           )
           if (activeOthers === 0) {
             throw new ForbiddenException({
@@ -274,7 +299,7 @@ export class AdminUsersService {
             entityId: id,
             changes,
           },
-          session,
+          session
         )
       }
 
@@ -284,14 +309,17 @@ export class AdminUsersService {
 
   async resetPassword(
     id: string,
-    actorId: string | null,
+    actorId: string | null
   ): Promise<{
     user: ReturnType<typeof toSafeUser>
     temporaryPassword: string
     temporaryPasswordExpiresAt: Date
   }> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'userId must be a valid ObjectId' })
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'userId must be a valid ObjectId',
+      })
     }
 
     return this.runInTransaction(async (session) => {
@@ -304,7 +332,7 @@ export class AdminUsersService {
       const temporaryPassword = generateTemporaryPassword()
       const { hash, salt } = hashPassword(temporaryPassword)
       const expiresAt = new Date(
-        Date.now() + temporaryPasswordExpiryHours(this.config) * 60 * 60 * 1000,
+        Date.now() + temporaryPasswordExpiryHours(this.config) * 60 * 60 * 1000
       )
 
       user.passwordHash = encodeCredential(hash, salt)
@@ -323,9 +351,12 @@ export class AdminUsersService {
           action: 'admin-user.password-reset',
           entityType: 'admin-user',
           entityId: id,
-          changes: { mustChangePassword: true, temporaryPasswordExpiresAt: expiresAt.toISOString() },
+          changes: {
+            mustChangePassword: true,
+            temporaryPasswordExpiresAt: expiresAt.toISOString(),
+          },
         },
-        session,
+        session
       )
 
       return {
@@ -338,7 +369,10 @@ export class AdminUsersService {
 
   async revokeSessions(id: string, actorId: string | null): Promise<{ revokedCount: number }> {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'userId must be a valid ObjectId' })
+      throw new BadRequestException({
+        code: 'VALIDATION_ERROR',
+        message: 'userId must be a valid ObjectId',
+      })
     }
 
     return this.runInTransaction(async (session) => {
@@ -358,7 +392,7 @@ export class AdminUsersService {
           entityId: id,
           changes: { revokedCount },
         },
-        session,
+        session
       )
 
       return { revokedCount }

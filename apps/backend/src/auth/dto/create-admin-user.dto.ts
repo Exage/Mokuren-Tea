@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
-import { IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
+import { IsBoolean, IsNotEmpty, IsOptional, IsString, Matches, MaxLength } from 'class-validator'
 
 export class CreateAdminUserDto {
-  @ApiProperty({ example: 'admin@example.com' })
-  @IsEmail()
+  @ApiProperty({ example: 'admin' })
+  @IsString()
   @IsNotEmpty()
   @MaxLength(300)
-  email!: string
+  @Matches(/\S/, { message: 'login must not be blank' })
+  login!: string
 
   @ApiProperty({ example: 'Administrator' })
   @IsString()

@@ -1,15 +1,10 @@
 import { Button } from '@mokuren/ui/button'
-import { PageHeading } from '@/app/shared/components/page-heading'
+import { AuthFrame } from '@/app/shared/components/auth-frame'
 
 export function NotFoundScreen() {
   return (
-    <div>
-      <PageHeading
-        eyebrow="404"
-        title="Page not found"
-        description="Choose a section from the menu or return to the overview."
-      />
+    <AuthFrame title="Page not found" description="Return to the overview to continue.">
       <Button href="/">Back to overview</Button>
-    </div>
+    </AuthFrame>
   )
 }

@@ -14,7 +14,9 @@ Root repository rules apply. Use the installed Next.js documentation in
 - Use CSS Modules and `clsx`. Do not use Tailwind, CSS-in-JS, `:global` overrides,
   `padding-inline`, or `padding-block`.
 - Keep server components by default; mark interactive boundaries with `'use client'`.
-- Reuse `@mokuren/ui/button` and `@mokuren/ui/tokens.css` across applications.
+- Use reusable controls from `@mokuren/ui` (Button, Input, Select,
+  DropdownTrigger, Checkbox, and Textarea) and `@mokuren/ui/tokens.css`.
+  Add new reusable controls to `packages/ui` instead of duplicating them here.
 - Use English for all interface copy, metadata, and accessibility labels.
 - Use Inter for body text and navigation, and Cormorant Garamond for headings,
   matching the storefront. Use shared color tokens and readable font weights.

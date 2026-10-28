@@ -1,16 +1,18 @@
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
+import { DictionaryEditor } from '@/app/shared/components/dictionary-editor'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
-export function TasteNotesScreen() {
+export async function TasteNotesScreen() {
+  await requireAdminSession()
   return (
-    <SectionPreview
-      eyebrow="Catalog and website"
-      title="Taste notes"
-      description="Manage the flavors and aromas used across your tea collection."
-      features={[
-        'Create and edit taste notes',
-        'Check which products use a taste note',
-        'Review linked products before deletion',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Catalog"
+        title="Taste notes"
+        description="Create and organize the tasting notes used across your collection."
+      />
+      <DictionaryEditor kind="taste-notes" />
+    </div>
   )
 }

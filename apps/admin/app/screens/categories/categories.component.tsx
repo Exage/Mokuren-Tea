@@ -1,16 +1,18 @@
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
+import { DictionaryEditor } from '@/app/shared/components/dictionary-editor'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
-export function CategoriesScreen() {
+export async function CategoriesScreen() {
+  await requireAdminSession()
   return (
-    <SectionPreview
-      eyebrow="Catalog and website"
-      title="Categories"
-      description="Organize the catalog by tea category."
-      features={[
-        'Create and edit categories',
-        'Manage names, slugs, and display order',
-        'Move products before deleting a category',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Catalog"
+        title="Categories"
+        description="Organize teas, change display order, and move products between categories."
+      />
+      <DictionaryEditor kind="categories" />
+    </div>
   )
 }

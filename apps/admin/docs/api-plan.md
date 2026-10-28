@@ -2,15 +2,15 @@
 
 Reviewed against the current NestJS controllers and DTOs in `apps/backend/src`,
 with the workspace documents `MOKUREN_TEA_BACKEND.md` and
-`MOKUREN_TEA_PRODUCTS.md` as product context. This document describes future
-integration; the initial admin scaffold makes no API requests.
+`MOKUREN_TEA_PRODUCTS.md` as product context. Session authentication and the products, media, categories, taste notes, and
+inventory interfaces are implemented. Other feature integrations remain planned.
 
 All paths below are relative to `/api`. Inspect live Swagger at
 `http://localhost:3001/api/docs` when the backend is running.
 
 ## Screens supported by existing controllers
 
-| Screen                       | Implemented API routes                                                                                                                                                                                                                                                                                                      | Planned UI                                                                                                              |
+| Screen                       | Implemented API routes                                                                                                                                                                                                                                                                                                      | UI scope                                                                                                                |
 | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Overview `/`                 | `GET /admin/dashboard`                                                                                                                                                                                                                                                                                                      | New, confirmed, ready counts; low/out-of-stock counts; recent active reservations; problematic products; manual refresh |
 | Products `/products`         | `GET/POST /admin/products`, `GET/PATCH /admin/products/:id`, `POST /:id/publish`, `POST /:id/archive`, `POST /:id/variants`, `PATCH /:id/variants/:variantId` under the same prefix                                                                                                                                         | Search, status filter, pagination, product editor, publication checks, variant management                               |
@@ -24,11 +24,11 @@ All paths below are relative to `/api`. Inspect live Swagger at
 | Administrators `/users`      | `GET/POST /admin/users`, `PATCH /admin/users/:id`, `POST /:id/reset-password`, `POST /:id/revoke-sessions` under the same prefix                                                                                                                                                                                            | Accounts, active status, password reset, session revocation                                                             |
 | Audit `/audit`               | `GET /admin/audit`                                                                                                                                                                                                                                                                                                          | Filtered, paginated read-only event history                                                                             |
 
-## Authentication comes first
+## Authentication (implemented)
 
 1. Request `GET /admin/auth/csrf-token` with credentials. It returns **204**, sets
    the `csrf_token` cookie, and has no JSON body.
-2. Send `POST /admin/auth/login` with email, password, cookies, and the cookie's
+2. Send `POST /admin/auth/login` with `login`, `password`, cookies, and the cookie's
    value in `X-CSRF-Token`. The session is an HttpOnly cookie, not a JSON token.
 3. Read `GET /admin/auth/me`. Honor `mustChangePassword` and implement
    `POST /admin/auth/change-password` before allowing ordinary admin features.
@@ -37,11 +37,14 @@ All paths below are relative to `/api`. Inspect live Swagger at
 5. Every cookie-authenticated mutation carries the CSRF header. Never persist a
    session token in localStorage or use a hardcoded login bypass.
 
-For local direct browser requests, allow `http://localhost:3002` in the backend's
-`CORS_ORIGINS` and use `credentials: 'include'`. The scaffold does not change the
-backend's environment. Production must use a deliberate same-site cookie/domain
-configuration or a same-origin proxy; unrelated domains cannot simply share the
-CSRF cookie. Authentication must also precede any server-side rendering of private data.
+The admin uses a same-origin proxy: `/api/admin/:path*` forwards to the server's
+`ADMIN_API_URL` (default `http://127.0.0.1:3001/api`). Browser requests include
+credentials and do not require a CORS change. Cookies must apply to the admin
+host; leave the backend cookie domain unset for host-only cookies. Production
+uses HTTPS for Secure cookies. Server-side session checks forward only the
+session cookie directly to the same API root, disable caching, and run in every
+protected screen before rendering. Authentication transitions discard the
+browser router cache. No backend environment or API contract changes are needed.
 
 ## Differences from the planning documents
 
@@ -80,3 +83,20 @@ CSRF cookie. Authentication must also precede any server-side rendering of priva
 
 Keep automatic payments, deliveries, customer accounts, email/Telegram alerts,
 freeform page building, polling, and automatic reservation expiry outside this scope.
+
+## Implemented catalog interfaces
+
+Products, media, dictionaries, and inventory now use the routes above with real
+loading, empty, error, and success feedback. Lists and reference pickers support
+pagination and search. Product status changes, dictionary/image deletion, and
+stock movements have a review step. The backend remains authoritative for
+publication checks, references, stock arithmetic, and concurrency. Archived
+products cannot be republished. The media library displays ready assets.
+
+Inventory mutation retries reuse an operation key after an uncertain response.
+Receipt/write-off quantities and stock-count targets use integer grams; reserved
+stock is never editable. Compensation is offered for manual receipts, write-offs,
+and adjustments; server conflicts explain already compensated or invalid changes.
+
+The remaining delivery sequence is overview/reservations, CMS/settings, then
+administrator management and audit browsing.

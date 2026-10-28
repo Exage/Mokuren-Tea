@@ -634,7 +634,7 @@ test('full HTTP path creates, stocks, publishes and fulfils a reservation', asyn
   })
   const login = await request(app.getHttpServer()).post('/api/admin/auth/login')
     .set('cookie', `csrf_token=${csrfToken}`).set('x-csrf-token', csrfToken)
-    .send({ email, password })
+    .send({ login: email, password })
   assert.equal(login.status, 200, JSON.stringify(login.body))
   const loginCookie = login.headers['set-cookie'].find((value) => value.startsWith('admin_session='))
   assert.ok(loginCookie)

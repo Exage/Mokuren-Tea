@@ -1,17 +1,18 @@
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import { InventoryWorkspace } from './components/inventory-workspace'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
-export function InventoryScreen() {
+export async function InventoryScreen() {
+  await requireAdminSession()
   return (
-    <SectionPreview
-      eyebrow="Store"
-      title="Inventory"
-      description="Track physical, reserved, and available stock in grams."
-      features={[
-        'View stock by product',
-        'Receive deliveries and record write-offs',
-        'Count stock and make adjustments',
-        'Review stock movements and their reasons',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Store"
+        title="Inventory"
+        description="Track stock in grams, record movements, and review inventory history."
+      />
+      <InventoryWorkspace />
+    </div>
   )
 }

@@ -5,7 +5,7 @@ import * as readlinePromises from 'node:readline/promises'
 import { stdin as input, stdout as output } from 'node:process'
 import { AppModule } from '../app.module.js'
 import { AdminUsersService } from './admin-users.service.js'
-import { normalizeEmail } from './password.js'
+import { normalizeLogin } from './password.js'
 
 // Prompts for a value with visible input.
 function prompt(query: string): Promise<string> {
@@ -84,12 +84,12 @@ async function run(): Promise<void> {
   try {
     const service = app.get(AdminUsersService)
 
-    const email = await prompt('Email: ')
-    let normalizedEmail: string
+    const login = await prompt('Login: ')
+    let normalizedLogin: string
     try {
-      normalizedEmail = normalizeEmail(email)
+      normalizedLogin = normalizeLogin(login)
     } catch {
-      console.error('Invalid email address')
+      console.error('Invalid login')
       process.exitCode = 1
       return
     }
@@ -109,17 +109,17 @@ async function run(): Promise<void> {
     }
 
     try {
-      const result = await service.createUser(normalizedEmail, displayName, null, password)
+      const result = await service.createUser(normalizedLogin, displayName, null, password)
 
       console.log()
       console.log('Administrator created.')
       console.log(`  ID:       ${result.user.id}`)
-      console.log(`  Email:    ${result.user.email}`)
+      console.log(`  Login:    ${result.user.login}`)
       console.log(`  Name:     ${result.user.displayName}`)
       console.log('The administrator can sign in with the password provided during creation.')
     } catch (error) {
       if ((error as { response?: { code?: string } })?.response?.code === 'CONFLICT') {
-        console.log('Administrator already exists with this email; nothing changed.')
+        console.log('Administrator already exists with this login; nothing changed.')
         return
       }
       throw error

@@ -1,17 +1,18 @@
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import { MediaWorkspace } from './components/media-workspace'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
-export function MediaScreen() {
+export async function MediaScreen() {
+  await requireAdminSession()
   return (
-    <SectionPreview
-      eyebrow="Catalog and website"
-      title="Media library"
-      description="A shared image library for the catalog and website."
-      features={[
-        'Upload images',
-        'Edit image names and alt text',
-        'Check where images are used',
-        'Delete unused images',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Store"
+        title="Media"
+        description="Upload images and manage the media used throughout your store."
+      />
+      <MediaWorkspace />
+    </div>
   )
 }

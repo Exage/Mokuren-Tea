@@ -72,12 +72,12 @@ test('creates an admin user and enforces normalizedEmail uniqueness', async () =
     await session.endSession()
   }
 
-  const byEmail = await userRepository.findByNormalizedEmail('admin@example.com')
+  const byEmail = await userRepository.findByNormalizedLogin('admin@example.com')
   assert.ok(byEmail)
   assert.equal(byEmail.displayName, 'Administrator')
   assert.equal(byEmail.email, 'Admin@Example.COM')
 
-  const absent = await userRepository.findByNormalizedEmail('other@example.com')
+  const absent = await userRepository.findByNormalizedLogin('other@example.com')
   assert.equal(absent, null, 'a different normalized email is absent')
 
   const duplicateId = new Types.ObjectId()

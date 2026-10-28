@@ -1,0 +1,46 @@
+.entry {
+  position: relative;
+}
+
+.entry:has(.edit:hover:not(:disabled)) {
+  background: var(--color-accent-soft);
+}
+
+.entry .edit {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.edit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--border-radius-sm);
+}
+
+.entry .edit:focus-visible {
+  outline: none;
+}
+
+.edit:focus-visible::after {
+  outline: 0.3rem solid var(--color-primary);
+  outline-offset: 0.3rem;
+}
+
+.details {
+  display: grid;
+  min-width: 0;
+}
+
+.delete {
+  position: relative;
+  z-index: 1;
+}

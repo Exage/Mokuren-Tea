@@ -13,7 +13,7 @@ import {
   DEFAULT_PASSWORD_MIN_LENGTH,
   encodeCredential,
   hashPassword,
-  normalizeEmail,
+  normalizeLogin,
   parseCredential,
   validatePassword,
   verifyPassword,
@@ -43,18 +43,18 @@ function passwordMaxLength(config: ConfigService): number {
 
 export interface SafeAdminUser {
   id: string
-  email: string
+  login: string
   displayName: string
   mustChangePassword: boolean
 }
 
 function invalidCredentials(): never {
-  // One generic error for unknown email, wrong password, inactive account, or
+  // One generic error for unknown login, wrong password, inactive account, or
   // expired temporary password: the response must not reveal whether an account
   // exists.
   throw new UnauthorizedException({
     code: 'INVALID_CREDENTIALS',
-    message: 'Invalid email or password',
+    message: 'Invalid login or password',
   })
 }
 
@@ -87,17 +87,22 @@ export class AuthService {
   private toSafeUser(user: AdminUserDocument): SafeAdminUser {
     return {
       id: String(user._id),
-      email: user.normalizedEmail,
+      login: user.normalizedEmail,
       displayName: user.displayName,
       mustChangePassword: user.mustChangePassword === true,
     }
   }
 
-  async login(email: unknown, password: unknown): Promise<{ user: SafeAdminUser; token: string }> {
-    const normalizedEmail = normalizeEmail(email)
+  async login(login: unknown, password: unknown): Promise<{ user: SafeAdminUser; token: string }> {
+    let normalizedLogin: string
+    try {
+      normalizedLogin = normalizeLogin(login)
+    } catch {
+      invalidCredentials()
+    }
 
     return this.runInTransaction(async (session) => {
-      const user = await this.adminUserRepository.findByNormalizedEmail(normalizedEmail, session)
+      const user = await this.adminUserRepository.findByNormalizedLogin(normalizedLogin, session)
 
       if (!user || typeof user.passwordHash !== 'string') {
         invalidCredentials()

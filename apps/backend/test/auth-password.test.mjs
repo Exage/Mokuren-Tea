@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { hashPassword, verifyPassword, normalizeEmail } from '../dist/auth/password.js'
+import { hashPassword, verifyPassword, normalizeLogin } from '../dist/auth/password.js'
 
 test('hashPassword produces a salted argon2id hash that verifyPassword accepts', () => {
   const stored = hashPassword('Password123')
@@ -43,14 +43,19 @@ test('verifyPassword returns false for empty and non-string passwords', () => {
   }
 })
 
-test('normalizeEmail trims and lowercases without removing dots or plus suffixes', () => {
-  assert.equal(normalizeEmail('  Admin@Example.COM  '), 'admin@example.com')
-  assert.equal(normalizeEmail('User.Name+tag@Example.COM'), 'user.name+tag@example.com')
-  assert.equal(normalizeEmail('UPPER@DOMAIN.COM'), 'upper@domain.com')
+test('normalizeLogin accepts usernames and preserves existing email-based identifiers', () => {
+  assert.equal(normalizeLogin('  Store.Admin_01  '), 'store.admin_01')
+  assert.equal(normalizeLogin('  Admin@Example.COM  '), 'admin@example.com')
+  assert.equal(normalizeLogin('User.Name+tag@Example.COM'), 'user.name+tag@example.com')
+  assert.equal(normalizeLogin('UPPER@DOMAIN.COM'), 'upper@domain.com')
 })
 
-test('normalizeEmail rejects empty and non-string emails', () => {
-  for (const email of ['', '   ', undefined, null, 123]) {
-    assert.throws(() => normalizeEmail(email), /email is required|email must be a string/i)
+test('normalizeLogin rejects empty and non-string logins', () => {
+  for (const login of ['', '   ', undefined, null, 123]) {
+    assert.throws(() => normalizeLogin(login), /login is required|login must be a string/i)
   }
+})
+
+test('normalizeLogin rejects identifiers longer than the stored login limit', () => {
+  assert.throws(() => normalizeLogin('a'.repeat(301)), /must not exceed 300/)
 })

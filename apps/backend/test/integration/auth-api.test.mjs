@@ -12,7 +12,7 @@ let replSet
 let db
 let userRepository
 
-const ADMIN_EMAIL = 'admin@example.com'
+const ADMIN_LOGIN = 'store-admin'
 const ADMIN_PASSWORD = 'Password123'
 
 function setCookieHeader(jar, name, value) {
@@ -65,8 +65,8 @@ before(async () => {
   await userRepository.create(
     {
       _id: adminId,
-      email: ADMIN_EMAIL,
-      normalizedEmail: ADMIN_EMAIL,
+      email: ADMIN_LOGIN,
+      normalizedEmail: ADMIN_LOGIN,
       displayName: 'Administrator',
       passwordHash: encodeCredential(hash, salt),
       mustChangePassword: false,
@@ -75,7 +75,7 @@ before(async () => {
       createdBy: null,
       lastLoginAt: null,
     },
-    null,
+    null
   )
 })
 
@@ -83,7 +83,7 @@ after(async () => {
   await stopTestApp(app, replSet)
 })
 
-async function loginJar(email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
+async function loginJar(login = ADMIN_LOGIN, password = ADMIN_PASSWORD) {
   const csrfToken = await fetchCsrfToken()
   const jar = []
   const cookie = `csrf_token=${csrfToken}${jar.length > 0 ? '; ' + jar.join('; ') : ''}`
@@ -91,7 +91,7 @@ async function loginJar(email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
     .post('/api/admin/auth/login')
     .set('Cookie', cookie)
     .set('X-CSRF-Token', csrfToken)
-    .send({ email, password })
+    .send({ login, password })
   setCookieHeader(jar, 'admin_session', cookieValue(response.headers, 'admin_session') || '')
   return { response, jar }
 }
@@ -100,7 +100,7 @@ async function loginJar(email = ADMIN_EMAIL, password = ADMIN_PASSWORD) {
 // run after the password-changing test are not affected by shared state.
 async function resetAdminPassword() {
   const { hash, salt } = hashPassword(ADMIN_PASSWORD)
-  const admin = await userRepository.findByNormalizedEmail(ADMIN_EMAIL)
+  const admin = await userRepository.findByNormalizedLogin(ADMIN_LOGIN)
   admin.passwordHash = encodeCredential(hash, salt)
   await userRepository.save(admin, null)
 }
@@ -115,13 +115,49 @@ test('login rejects missing credentials with 400', async () => {
   assert.equal(response.status, 400)
 })
 
+test('login validates the login field and rejects the former email request field', async () => {
+  const csrfToken = await fetchCsrfToken()
+  for (const credentials of [
+    { email: ADMIN_LOGIN, password: ADMIN_PASSWORD },
+    { login: '   ', password: ADMIN_PASSWORD },
+    { login: 123, password: ADMIN_PASSWORD },
+    { login: 'a'.repeat(301), password: ADMIN_PASSWORD },
+  ]) {
+    const response = await request(app.getHttpServer())
+      .post('/api/admin/auth/login')
+      .set('Cookie', `csrf_token=${csrfToken}`)
+      .set('X-CSRF-Token', csrfToken)
+      .send(credentials)
+    assert.equal(response.status, 400)
+    assert.equal(cookieValue(response.headers, 'admin_session'), null)
+  }
+})
+
+test('existing email-based accounts can use their previous identifier as a login', async () => {
+  const identifier = 'legacy-admin@example.com'
+  const { hash, salt } = hashPassword(ADMIN_PASSWORD)
+  await db.collection('adminusers').insertOne({
+    email: identifier,
+    normalizedEmail: identifier,
+    displayName: 'Existing administrator',
+    passwordHash: encodeCredential(hash, salt),
+    mustChangePassword: false,
+    temporaryPasswordExpiresAt: null,
+    isActive: true,
+  })
+  const { response } = await loginJar('  LEGACY-ADMIN@EXAMPLE.COM  ')
+  assert.equal(response.status, 200)
+  assert.equal(response.body.user.login, identifier)
+  assert.equal(response.body.user.email, undefined)
+})
+
 test('login requires CSRF for every route casing, including form submissions', async () => {
   for (const path of ['/api/admin/auth/login', '/api/ADMIN/AUTH/LOGIN', '/API/Admin/Auth/Login/']) {
     const response = await request(app.getHttpServer())
       .post(path)
       .set('Origin', 'https://untrusted.example')
       .type('form')
-      .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD })
+      .send({ login: ADMIN_LOGIN, password: ADMIN_PASSWORD })
     assert.equal(response.status, 403, path)
     assert.equal(response.body.code, 'CSRF_REQUIRED')
     assert.equal(cookieValue(response.headers, 'admin_session'), null)
@@ -136,7 +172,9 @@ test('an empty duplicate session cookie cannot bypass CSRF', async () => {
     .set('Cookie', `admin_session=${token}; admin_session=`)
   assert.equal(logout.status, 403)
   assert.equal(logout.body.code, 'CSRF_REQUIRED')
-  const session = await db.collection('adminsessions').findOne({ tokenHash: hashSessionToken(token) })
+  const session = await db
+    .collection('adminsessions')
+    .findOne({ tokenHash: hashSessionToken(token) })
   assert.equal(session.revokedAt, null)
 })
 
@@ -146,19 +184,19 @@ test('login rejects wrong credentials with a generic 401 and no session cookie',
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${csrfToken}`)
     .set('X-CSRF-Token', csrfToken)
-    .send({ email: ADMIN_EMAIL, password: 'wrong-password' })
+    .send({ login: ADMIN_LOGIN, password: 'wrong-password' })
   assert.equal(response.status, 401)
   assert.equal(response.body.code, 'INVALID_CREDENTIALS')
   assert.equal(cookieValue(response.headers, 'admin_session'), null)
 })
 
-test('login rejects an unknown email with the same generic 401', async () => {
+test('login rejects an unknown login with the same generic 401', async () => {
   const csrfToken = await fetchCsrfToken()
   const response = await request(app.getHttpServer())
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${csrfToken}`)
     .set('X-CSRF-Token', csrfToken)
-    .send({ email: 'nobody@example.com', password: ADMIN_PASSWORD })
+    .send({ login: 'nobody@example.com', password: ADMIN_PASSWORD })
   assert.equal(response.status, 401)
   assert.equal(response.body.code, 'INVALID_CREDENTIALS')
 })
@@ -167,7 +205,8 @@ test('login succeeds, sets an HttpOnly session cookie, and returns safe user dat
   const { response, jar } = await loginJar()
 
   assert.equal(response.status, 200)
-  assert.equal(response.body.user.email, ADMIN_EMAIL)
+  assert.equal(response.body.user.login, ADMIN_LOGIN)
+  assert.equal(response.body.user.email, undefined)
   assert.equal(response.body.user.displayName, 'Administrator')
   assert.equal(response.body.user.mustChangePassword, false)
   assert.equal(response.body.mustChangePassword, false)
@@ -181,18 +220,18 @@ test('login succeeds, sets an HttpOnly session cookie, and returns safe user dat
     .get('/api/admin/auth/me')
     .set('Cookie', jar.join('; '))
   assert.equal(me.status, 200)
-  assert.equal(me.body.email, ADMIN_EMAIL)
+  assert.equal(me.body.login, ADMIN_LOGIN)
 })
 
-test('login normalizes email casing and whitespace', async () => {
+test('login normalizes login casing and whitespace', async () => {
   const csrfToken = await fetchCsrfToken()
   const response = await request(app.getHttpServer())
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${csrfToken}`)
     .set('X-CSRF-Token', csrfToken)
-    .send({ email: '  ADMIN@Example.COM  ', password: ADMIN_PASSWORD })
+    .send({ login: '  STORE-ADMIN  ', password: ADMIN_PASSWORD })
   assert.equal(response.status, 200)
-  assert.equal(response.body.user.email, ADMIN_EMAIL)
+  assert.equal(response.body.user.login, ADMIN_LOGIN)
 })
 
 test('me rejects requests without a session', async () => {
@@ -218,9 +257,7 @@ test('logout revokes the session and clears the cookie with matching options', a
     .set('X-CSRF-Token', csrfToken)
   assert.equal(logout.status, 200)
 
-  const after = await db
-    .collection('adminsessions')
-    .findOne({ tokenHash: hashSessionToken(token) })
+  const after = await db.collection('adminsessions').findOne({ tokenHash: hashSessionToken(token) })
   assert.ok(after && after.revokedAt)
   const audit = await db.collection('auditlogs').findOne({
     action: 'admin-user.logged-out',
@@ -239,19 +276,18 @@ test('logout revokes the session and clears the cookie with matching options', a
       (e) =>
         e.startsWith('admin_session=') &&
         e.includes('HttpOnly') &&
-        e.includes('Expires=Thu, 01 Jan 1970'),
+        e.includes('Expires=Thu, 01 Jan 1970')
     ),
-    'logout clears the admin_session cookie with matching options',
+    'logout clears the admin_session cookie with matching options'
   )
 })
 
 test('me rejects a revoked session', async () => {
   const { response } = await loginJar()
   const token = cookieValue(response.headers, 'admin_session')
-  await db.collection('adminsessions').updateOne(
-    { tokenHash: hashSessionToken(token) },
-    { $set: { revokedAt: new Date() } },
-  )
+  await db
+    .collection('adminsessions')
+    .updateOne({ tokenHash: hashSessionToken(token) }, { $set: { revokedAt: new Date() } })
 
   const me = await request(app.getHttpServer())
     .get('/api/admin/auth/me')
@@ -261,7 +297,9 @@ test('me rejects a revoked session', async () => {
 
 test('change-password rejects a wrong current password', async () => {
   const { jar } = await loginJar()
-  const token = cookieValue({ headers: { 'set-cookie': jar.join('; ') } }, 'admin_session') || jar[0].split('=')[1]
+  const token =
+    cookieValue({ headers: { 'set-cookie': jar.join('; ') } }, 'admin_session') ||
+    jar[0].split('=')[1]
   const csrfToken = await fetchCsrfToken()
   const response = await request(app.getHttpServer())
     .post('/api/admin/auth/change-password')
@@ -315,7 +353,7 @@ test('change-password with the new password then works for login', async () => {
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${finalCsrfToken}`)
     .set('X-CSRF-Token', finalCsrfToken)
-    .send({ email: ADMIN_EMAIL, password: 'NewPassword123' })
+    .send({ login: ADMIN_LOGIN, password: 'NewPassword123' })
   assert.equal(response.status, 200)
 
   // Restore the shared administrator's password for the tests that follow.
@@ -342,7 +380,7 @@ test('csrf blocks login when a csrf cookie exists but no token header is sent', 
   const response = await request(app.getHttpServer())
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${csrfToken}`)
-    .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD })
+    .send({ login: ADMIN_LOGIN, password: ADMIN_PASSWORD })
 
   assert.equal(response.status, 403)
   assert.equal(response.body.code, 'CSRF_REQUIRED')
@@ -358,10 +396,10 @@ test('csrf allows login when the token header matches the cookie', async () => {
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${csrfToken}`)
     .set('X-CSRF-Token', csrfToken)
-    .send({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD })
+    .send({ login: ADMIN_LOGIN, password: ADMIN_PASSWORD })
 
   assert.equal(response.status, 200)
-  assert.equal(response.body.user.email, ADMIN_EMAIL)
+  assert.equal(response.body.user.login, ADMIN_LOGIN)
   assert.ok(cookieValue(response.headers, 'admin_session'))
 })
 

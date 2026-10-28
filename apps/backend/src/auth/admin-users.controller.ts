@@ -10,17 +10,27 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common'
-import { ApiBearerAuth, ApiCookieAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
+import {
+  ApiBearerAuth,
+  ApiCookieAuth,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger'
 import { AdminAuthGuard } from './admin-auth.guard.js'
 import { CsrfGuard } from './csrf.guard.js'
 import { CurrentAdmin } from './current-admin.decorator.js'
 import { AdminUsersService } from './admin-users.service.js'
 import { RateLimitGuard } from './rate-limit.guard.js'
-import { AdminUserDto, AdminUserCreateResponse, AdminUserListResponse } from './dto/admin-user.dto.js'
+import {
+  AdminUserDto,
+  AdminUserCreateResponse,
+  AdminUserListResponse,
+} from './dto/admin-user.dto.js'
 import { CreateAdminUserDto } from './dto/create-admin-user.dto.js'
 import { UpdateAdminUserDto } from './dto/create-admin-user.dto.js'
 import { AdminUsersQueryDto } from './dto/admin-users-query.dto.js'
-import type { AdminUserDocument } from './schemas/admin-user.schema.js'
 
 // Administrative user management. Every route is protected by the full-access
 // admin guard, so temporary-password accounts (mustChangePassword) cannot
@@ -34,7 +44,7 @@ export class AdminUsersController {
 
   private toDto(user: {
     id: string
-    email: string
+    login: string
     displayName: string
     isActive: boolean
     mustChangePassword: boolean
@@ -44,7 +54,7 @@ export class AdminUsersController {
   }): AdminUserDto {
     return {
       id: user.id,
-      email: user.email,
+      login: user.login,
       displayName: user.displayName,
       isActive: user.isActive,
       mustChangePassword: user.mustChangePassword,
@@ -59,16 +69,14 @@ export class AdminUsersController {
   @HttpCode(200)
   @ApiOperation({ summary: 'List administrators' })
   @ApiOkResponse({ type: AdminUserListResponse })
-  async list(
-    @Query() query: AdminUsersQueryDto,
-  ): Promise<AdminUserListResponse> {
+  async list(@Query() query: AdminUsersQueryDto): Promise<AdminUserListResponse> {
     const page = query.page ?? 1
     const limit = query.limit ?? 20
     const { items, totalItems } = await this.adminUsersService.listUsers(page, limit, query.search)
     const totalPages = Math.ceil(totalItems / limit)
 
     return {
-      items: items.map((item: AdminUserDocument) => this.toDto(item)),
+      items: items.map((item) => this.toDto(item)),
       pagination: { page, limit, totalItems, totalPages },
     }
   }
@@ -80,9 +88,13 @@ export class AdminUsersController {
   @ApiCreatedResponse({ type: AdminUserCreateResponse })
   async create(
     @Body() dto: CreateAdminUserDto,
-    @CurrentAdmin() admin: AdminRequestUser,
+    @CurrentAdmin() admin: AdminRequestUser
   ): Promise<AdminUserCreateResponse> {
-    const result = await this.adminUsersService.createUser(dto.email, dto.displayName, admin.adminId)
+    const result = await this.adminUsersService.createUser(
+      dto.login,
+      dto.displayName,
+      admin.adminId
+    )
 
     const response: AdminUserCreateResponse = {
       user: this.toDto(result.user),
@@ -104,7 +116,7 @@ export class AdminUsersController {
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateAdminUserDto,
-    @CurrentAdmin() admin: AdminRequestUser,
+    @CurrentAdmin() admin: AdminRequestUser
   ): Promise<AdminUserDto> {
     return this.toDto(await this.adminUsersService.updateUser(id, dto, admin.adminId))
   }
@@ -116,7 +128,7 @@ export class AdminUsersController {
   @ApiOkResponse({ type: AdminUserCreateResponse })
   async resetPassword(
     @Param('id') id: string,
-    @CurrentAdmin() admin: AdminRequestUser,
+    @CurrentAdmin() admin: AdminRequestUser
   ): Promise<AdminUserCreateResponse> {
     const result = await this.adminUsersService.resetPassword(id, admin.adminId)
 
@@ -134,7 +146,7 @@ export class AdminUsersController {
   @ApiOkResponse({ description: 'Sessions revoked' })
   revokeSessions(
     @Param('id') id: string,
-    @CurrentAdmin() admin: AdminRequestUser,
+    @CurrentAdmin() admin: AdminRequestUser
   ): Promise<{ revokedCount: number }> {
     return this.adminUsersService.revokeSessions(id, admin.adminId)
   }

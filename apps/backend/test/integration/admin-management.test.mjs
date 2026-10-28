@@ -89,8 +89,9 @@ async function csrfHeaders(sessionCookie) {
   }
 }
 
-async function assertSafeUser(body, expectedEmail, expectedDisplayName) {
-  assert.equal(body.email, expectedEmail)
+function assertSafeUser(body, expectedLogin, expectedDisplayName) {
+  assert.equal(body.login, expectedLogin)
+  assert.equal(body.email, undefined)
   assert.equal(body.displayName, expectedDisplayName)
   assert.ok(typeof body.id === 'string' && body.id.length > 0)
   assert.ok(typeof body.isActive === 'boolean')
@@ -105,7 +106,7 @@ before(async () => {
   db = started.db
 
   // Ensure the unique normalizedEmail index exists (mirrors the AdminUser
-  // schema index) so duplicate-email assertions are deterministic.
+  // schema index) so duplicate-login assertions are deterministic.
   await db.collection('adminusers').createIndex({ normalizedEmail: 1 }, { unique: true })
 
   // Seed one administrator used to manage others.
@@ -127,10 +128,10 @@ test('create returns a safe profile and a temporary password only once', async (
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'newbie@example.com', displayName: 'Newbie' })
+    .send({ login: 'newbie', displayName: 'Newbie' })
 
   assert.equal(res.status, 201)
-  assertSafeUser(res.body.user, 'newbie@example.com', 'Newbie')
+  assertSafeUser(res.body.user, 'newbie', 'Newbie')
   assert.equal(res.body.user.mustChangePassword, true)
   assert.ok(typeof res.body.temporaryPassword === 'string' && res.body.temporaryPassword.length > 0)
   assert.ok(res.body.temporaryPasswordExpiresAt)
@@ -144,7 +145,7 @@ test('create returns a safe profile and a temporary password only once', async (
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${newbieCsrf}`)
     .set('X-CSRF-Token', newbieCsrf)
-    .send({ email: 'newbie@example.com', password: res.body.temporaryPassword })
+    .send({ login: 'newbie', password: res.body.temporaryPassword })
   assert.equal(login.status, 200)
   assert.equal(login.body.mustChangePassword, true)
 
@@ -159,7 +160,7 @@ test('create returns a safe profile and a temporary password only once', async (
   assert.equal(forbidden.body.code, 'PASSWORD_CHANGE_REQUIRED')
 })
 
-test('create rejects a duplicate normalized email', async () => {
+test('create rejects a duplicate normalized login', async () => {
   const session = await authCookie(managerId)
   const headers = await csrfHeaders(session)
 
@@ -167,18 +168,18 @@ test('create rejects a duplicate normalized email', async () => {
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'dup@example.com', displayName: 'Dup' })
+    .send({ login: 'dup', displayName: 'Dup' })
     .then((res) => assert.equal(res.status, 201))
 
   const conflict = await request(app.getHttpServer())
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'DUP@EXAMPLE.COM', displayName: 'Dup2' })
+    .send({ login: 'DUP', displayName: 'Dup2' })
 
   assert.equal(conflict.status, 409)
   assert.equal(conflict.body.code, 'CONFLICT')
-  assert.equal(await db.collection('adminusers').countDocuments({ normalizedEmail: 'dup@example.com' }), 1)
+  assert.equal(await db.collection('adminusers').countDocuments({ normalizedEmail: 'dup' }), 1)
 })
 
 test('list excludes password hashes and temporary passwords', async () => {
@@ -189,7 +190,7 @@ test('list excludes password hashes and temporary passwords', async () => {
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'lister@example.com', displayName: 'Lister' })
+    .send({ login: 'lister@example.com', displayName: 'Lister' })
 
   const list = await request(app.getHttpServer())
     .get('/api/admin/users')
@@ -197,7 +198,7 @@ test('list excludes password hashes and temporary passwords', async () => {
 
   assert.equal(list.status, 200)
   assert.ok(Array.isArray(list.body.items))
-  assert.ok(list.body.items.some((u) => u.email === 'lister@example.com'))
+  assert.ok(list.body.items.some((u) => u.login === 'lister@example.com'))
   for (const user of list.body.items) {
     assert.ok(!user.passwordHash)
     assert.ok(!user.temporaryPassword)
@@ -211,7 +212,7 @@ test('update changes permitted fields only', async () => {
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'updater@example.com', displayName: 'Before' })
+    .send({ login: 'updater@example.com', displayName: 'Before' })
   assert.equal(created.status, 201)
   const id = created.body.user.id
 
@@ -225,7 +226,7 @@ test('update changes permitted fields only', async () => {
 
   assert.equal(res.status, 200)
   assert.equal(res.body.displayName, 'After')
-  assert.equal(res.body.email, 'updater@example.com')
+  assert.equal(res.body.login, 'updater@example.com')
 
   const stored = await db.collection('adminusers').findOne({ _id: new Types.ObjectId(id) })
   assert.equal(stored.displayName, 'After')
@@ -236,7 +237,7 @@ test('account updates recover from a legacy stranded lock and release on transac
   await locks.updateOne(
     { _id: new Types.ObjectId('000000000000000000000000') },
     { $set: { holder: 'crashed-process' } },
-    { upsert: true },
+    { upsert: true }
   )
   const service = app.get(AdminUsersService)
   const audit = t.mock.method(app.get(AuditService), 'record', async () => {
@@ -244,7 +245,7 @@ test('account updates recover from a legacy stranded lock and release on transac
   })
   await assert.rejects(
     service.updateUser(managerId, { displayName: 'Must roll back' }, managerId),
-    /Audit write failed/,
+    /Audit write failed/
   )
   audit.mock.restore()
   const stored = await db.collection('adminusers').findOne({ _id: new Types.ObjectId(managerId) })
@@ -262,7 +263,7 @@ test('update rejects empty body and unknown fields are ignored', async () => {
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'noop@example.com', displayName: 'Noop' })
+    .send({ login: 'noop@example.com', displayName: 'Noop' })
   assert.equal(created.status, 201)
   const id = created.body.user.id
 
@@ -344,7 +345,7 @@ test('reset-password issues a new temporary password and revokes sessions', asyn
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${loginCsrf}`)
     .set('X-CSRF-Token', loginCsrf)
-    .send({ email: 'resetter@example.com', password: res.body.temporaryPassword })
+    .send({ login: 'resetter@example.com', password: res.body.temporaryPassword })
   assert.equal(login.status, 200)
 })
 
@@ -356,8 +357,18 @@ test('revoke-sessions revokes every session for an administrator', async () => {
   const token2 = 'revoke-session-two'
   const { hashSessionToken } = await import('../../dist/auth/admin-auth.guard.js')
   await db.collection('adminsessions').insertMany([
-    { adminUserId: new Types.ObjectId(targetId), tokenHash: hashSessionToken(token1), expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000), revokedAt: null },
-    { adminUserId: new Types.ObjectId(targetId), tokenHash: hashSessionToken(token2), expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000), revokedAt: null },
+    {
+      adminUserId: new Types.ObjectId(targetId),
+      tokenHash: hashSessionToken(token1),
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+      revokedAt: null,
+    },
+    {
+      adminUserId: new Types.ObjectId(targetId),
+      tokenHash: hashSessionToken(token2),
+      expiresAt: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+      revokedAt: null,
+    },
   ])
 
   const managerSession = await authCookie(managerId)
@@ -395,7 +406,7 @@ test('audit records mutations without secrets', async () => {
     .post('/api/admin/users')
     .set('Cookie', headers.cookie)
     .set('X-CSRF-Token', headers['x-csrf-token'])
-    .send({ email: 'audit@example.com', displayName: 'Audit' })
+    .send({ login: 'audit@example.com', displayName: 'Audit' })
   assert.equal(created.status, 201)
 
   const audit = await db.collection('auditlogs').findOne({
@@ -421,9 +432,7 @@ test('concurrent deactivations cannot drive the active count to zero', async () 
   const allUsers = await request(app.getHttpServer())
     .get('/api/admin/users')
     .set('Cookie', `admin_session=${sessionX}`)
-  const toDeactivate = allUsers.body.items.filter(
-    (u) => u.id !== xId && u.id !== yId,
-  )
+  const toDeactivate = allUsers.body.items.filter((u) => u.id !== xId && u.id !== yId)
   for (const u of toDeactivate) {
     await request(app.getHttpServer())
       .patch(`/api/admin/users/${u.id}`)
@@ -439,8 +448,14 @@ test('concurrent deactivations cannot drive the active count to zero', async () 
   const csrfToken = cookieValue(tokenRes.headers, 'csrf_token')
   assert.ok(csrfToken)
 
-  const headersX = { cookie: `csrf_token=${csrfToken}; admin_session=${sessionX}`, 'x-csrf-token': csrfToken }
-  const headersY = { cookie: `csrf_token=${csrfToken}; admin_session=${sessionY}`, 'x-csrf-token': csrfToken }
+  const headersX = {
+    cookie: `csrf_token=${csrfToken}; admin_session=${sessionX}`,
+    'x-csrf-token': csrfToken,
+  }
+  const headersY = {
+    cookie: `csrf_token=${csrfToken}; admin_session=${sessionY}`,
+    'x-csrf-token': csrfToken,
+  }
 
   const [xRes, yRes] = await Promise.all([
     request(app.getHttpServer())
@@ -491,7 +506,7 @@ test('expired temporary password cannot be used to log in', async () => {
     .post('/api/admin/auth/login')
     .set('Cookie', `csrf_token=${expiredCsrf}`)
     .set('X-CSRF-Token', expiredCsrf)
-    .send({ email: 'expired@example.com', password: 'temp-expired' })
+    .send({ login: 'expired@example.com', password: 'temp-expired' })
 
   assert.equal(res.status, 401)
   assert.equal(res.body.code, 'INVALID_CREDENTIALS')
@@ -536,7 +551,7 @@ test('list includes inactive administrators so they can be managed', async () =>
     .set('Cookie', `admin_session=${session}`)
 
   assert.equal(list.status, 200)
-  assert.ok(list.body.items.some((u) => u.id === inactiveId && u.email === 'inactive@example.com'))
+  assert.ok(list.body.items.some((u) => u.id === inactiveId && u.login === 'inactive@example.com'))
   assert.ok(list.body.items.some((u) => u.id === inactiveId && u.isActive === false))
 })
 
@@ -587,4 +602,3 @@ test('category creation requires a CSRF token when authenticated by cookie', asy
   assert.equal(created.status, 201)
   assert.equal(created.body.name, 'With CSRF')
 })
-

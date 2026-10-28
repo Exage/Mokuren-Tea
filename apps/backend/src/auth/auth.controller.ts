@@ -131,13 +131,13 @@ export class AdminAuthController {
   @RequireCsrf()
   @UseGuards(RateLimitGuard, CsrfGuard)
   @HttpCode(200)
-  @ApiOperation({ summary: 'Sign in with email and password' })
+  @ApiOperation({ summary: 'Sign in with login and password' })
   @ApiOkResponse({ type: AdminAuthResponse })
   async login(
     @Body() dto: AdminLoginDto,
     @Res({ passthrough: true }) response: HttpCookieResponse,
   ) {
-    const { user, token } = await this.authService.login(dto.email, dto.password)
+    const { user, token } = await this.authService.login(dto.login, dto.password)
 
     response.cookie(this.cookieName(), token, this.cookieOptions())
 

@@ -15,7 +15,7 @@ async function assertInvalidCredentials(fn) {
     await fn()
   } catch (error) {
     threw = true
-    assert.equal(error.message, 'Invalid email or password')
+    assert.equal(error.message, 'Invalid login or password')
     assert.equal(error.response?.code ?? error.code, 'INVALID_CREDENTIALS')
   }
 
@@ -67,13 +67,13 @@ after(async () => {
 test('login returns a safe profile and a server session token', async () => {
   const { user, token } = await authService.login(ADMIN_EMAIL, ADMIN_PASSWORD)
 
-  assert.equal(user.email, ADMIN_EMAIL)
+  assert.equal(user.login, ADMIN_EMAIL)
   assert.equal(user.displayName, 'Administrator')
   assert.equal(user.mustChangePassword, false)
   assert.ok(typeof user.id === 'string' && user.id.length > 0)
   assert.ok(typeof token === 'string' && token.length > 0)
 
-  const userRecord = await userRepository.findByNormalizedEmail(ADMIN_EMAIL)
+  const userRecord = await userRepository.findByNormalizedLogin(ADMIN_EMAIL)
   assert.ok(userRecord.lastLoginAt)
 })
 
@@ -81,7 +81,7 @@ test('login rejects wrong password with a generic credential error', async () =>
   await assertInvalidCredentials(() => authService.login(ADMIN_EMAIL, 'wrong-password'))
 })
 
-test('login rejects an unknown email with the same generic error', async () => {
+test('login rejects an unknown login with the same generic error', async () => {
   await assertInvalidCredentials(() => authService.login('nobody@example.com', ADMIN_PASSWORD))
 })
 
@@ -158,13 +158,13 @@ test('login rejects an expired temporary password', async () => {
 test('changePassword rejects a wrong current password, then succeeds and rotates sessions', async () => {
   await assertInvalidCredentials(async () =>
     authService.changePassword(
-      String((await userRepository.findByNormalizedEmail(ADMIN_EMAIL))._id),
+      String((await userRepository.findByNormalizedLogin(ADMIN_EMAIL))._id),
       'wrong-current',
       'NewPassword123'
     )
   )
 
-  const userRecord = await userRepository.findByNormalizedEmail(ADMIN_EMAIL)
+  const userRecord = await userRepository.findByNormalizedLogin(ADMIN_EMAIL)
   const oldToken = 'old-session-token'
   await sessionRepository.create(
     {

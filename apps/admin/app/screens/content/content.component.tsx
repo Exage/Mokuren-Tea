@@ -1,6 +1,9 @@
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
 import { SectionPreview } from '@/app/shared/components/section-preview'
 
-export function ContentScreen() {
+export async function ContentScreen() {
+  await requireAdminSession()
+
   return (
     <SectionPreview
       eyebrow="Catalog and website"

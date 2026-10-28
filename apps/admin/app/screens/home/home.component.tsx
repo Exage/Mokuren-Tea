@@ -1,10 +1,13 @@
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
 import { PageHeading } from '@/app/shared/components/page-heading'
 import { OverviewMetrics } from '@/app/screens/home/components/overview-metrics'
 import { ReservationSummary } from '@/app/screens/home/components/reservation-summary'
 import { QuickActions } from '@/app/screens/home/components/quick-actions'
 import styles from './home.module.css'
 
-export function HomeScreen() {
+export async function HomeScreen() {
+  await requireAdminSession()
+
   return (
     <div>
       <PageHeading

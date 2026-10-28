@@ -4,10 +4,9 @@ import type { HydratedDocument } from 'mongoose'
 
 export type AdminUserDocument = HydratedDocument<AdminUser>
 
-// One role only: Administrator. email is the address as provided (trimmed,
-// original case); normalizedEmail is the canonical login identifier produced by
-// normalizeEmail (trim + lowercase, dots and `+` suffixes preserved). Passwords
-// are never stored or returned in plaintext.
+// The historical email/normalizedEmail storage names now hold login identifiers.
+// Keep these paths and their unique index so existing accounts remain usable
+// without a database migration. API responses expose only `login`.
 @Schema({ timestamps: true, collection: 'adminusers' })
 export class AdminUser {
   @Prop({ required: true, trim: true, maxlength: 300 })

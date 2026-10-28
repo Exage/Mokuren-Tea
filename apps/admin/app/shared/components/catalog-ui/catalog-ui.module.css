@@ -1,0 +1,142 @@
+.stack {
+  display: grid;
+  gap: 2.4rem;
+  min-width: 0;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(32rem, 1fr);
+  gap: 2.4rem;
+  align-items: start;
+}
+.panel {
+  padding: 2.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-background);
+  min-width: 0;
+}
+.panel h2,
+.panel h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 2.6rem;
+}
+.fields {
+  display: grid;
+  gap: 1.6rem;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.field {
+  display: grid;
+  gap: 0.6rem;
+  font-weight: 500;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  align-items: center;
+}
+.actions .field {
+  flex: 1;
+}
+.row {
+  display: flex;
+  gap: 1.6rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+.row:first-child {
+  padding-top: 0;
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.selected {
+  background: var(--color-accent-soft);
+}
+.muted {
+  color: var(--color-text-muted);
+  font-size: 1.3rem;
+}
+.error {
+  padding: 1.2rem;
+  background: #fff1ef;
+  color: #922d25;
+  border-radius: 0.6rem;
+  overflow-wrap: anywhere;
+}
+.notice {
+  padding: 1.2rem;
+  background: var(--color-accent-soft);
+  color: var(--color-primary-dark);
+  border-radius: 0.6rem;
+}
+.check {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.image {
+  width: 8rem;
+  height: 8rem;
+  object-fit: contain;
+  border-radius: 0.6rem;
+  background: var(--color-surface);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: 1.6rem;
+}
+.card {
+  padding: 1.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.8rem;
+  display: grid;
+  gap: 1.2rem;
+  overflow-wrap: anywhere;
+}
+.card .image {
+  width: 100%;
+  height: 14rem;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+.table th,
+.table td {
+  padding: 1.2rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+.scroll {
+  overflow-x: auto;
+}
+.danger {
+  color: #922d25;
+}
+@media (max-width: 1200px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .panel {
+    padding: 1.6rem;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+}

@@ -65,7 +65,7 @@ test('custom cookies work through login, protected mutations, password change, a
     .set('Origin', origin)
     .set('Cookie', csrfCookie)
     .set('X-CSRF-Token', csrfToken)
-    .send({ email: admin.email, password })
+    .send({ login: admin.login, password })
   assert.equal(login.status, 200)
   assert.equal(login.headers['access-control-allow-origin'], origin)
   const sessionCookie = getCookie(login, 'custom_session')
@@ -111,7 +111,7 @@ test('custom cookies work through login, protected mutations, password change, a
 
 test('audit failures roll back password changes and logout revocations', async (t) => {
   const auth = app.get(AuthService)
-  const login = await auth.login(admin.email, 'ChangedPassword123')
+  const login = await auth.login(admin.login, 'ChangedPassword123')
   const audit = t.mock.method(app.get(AuditService), 'record', async () => {
     throw new Error('Audit unavailable')
   })
@@ -123,6 +123,6 @@ test('audit failures roll back password changes and logout revocations', async (
   audit.mock.restore()
   const session = await db.collection('adminsessions').findOne({ tokenHash: hashSessionToken(login.token) })
   assert.equal(session.revokedAt, null)
-  await auth.login(admin.email, 'ChangedPassword123')
-  await assert.rejects(auth.login(admin.email, 'MustNotPersist123'), /Invalid email or password/)
+  await auth.login(admin.login, 'ChangedPassword123')
+  await assert.rejects(auth.login(admin.login, 'MustNotPersist123'), /Invalid login or password/)
 })

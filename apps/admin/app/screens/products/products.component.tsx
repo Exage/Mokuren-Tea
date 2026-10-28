@@ -1,17 +1,18 @@
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import { ProductWorkspace } from './components/product-workspace'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
-export function ProductsScreen() {
+export async function ProductsScreen() {
+  await requireAdminSession()
   return (
-    <SectionPreview
-      eyebrow="Store"
-      title="Products"
-      description="Manage your tea collection and product details."
-      features={[
-        'Edit product details, images, and descriptions',
-        'Manage pack sizes in grams and prices in BYN',
-        'Draft, publish, and archive products',
-        'Search and filter by status',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Store"
+        title="Products"
+        description="Manage your collection, product images, pack sizes, and publication."
+      />
+      <ProductWorkspace />
+    </div>
   )
 }

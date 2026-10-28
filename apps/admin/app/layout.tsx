@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import clsx from 'clsx'
 import { Cormorant_Garamond, Inter } from 'next/font/google'
-import { AdminShell } from '@/app/shared/components/admin-shell'
 import '@/app/shared/styles/globals.css'
 
 const headingFont = Cormorant_Garamond({
@@ -26,9 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={clsx(headingFont.variable, bodyFont.variable)}>
-      <body>
-        <AdminShell>{children}</AdminShell>
-      </body>
+      <body>{children}</body>
     </html>
   )
 }

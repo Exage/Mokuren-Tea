@@ -6,8 +6,8 @@ export class AdminUserResponse {
   @ApiProperty({ example: '507f1f77bcf86cd799439011' })
   id!: string
 
-  @ApiProperty({ example: 'admin@example.com' })
-  email!: string
+  @ApiProperty({ example: 'admin' })
+  login!: string
 
   @ApiProperty({ example: 'Administrator' })
   displayName!: string

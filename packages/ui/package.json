@@ -7,7 +7,9 @@
     "./dropdown-trigger": "./src/components/dropdown-trigger/index.ts",
     "./select": "./src/components/select/index.ts",
     "./tokens.css": "./src/styles/tokens.css",
-    "./input": "./src/components/input/index.ts"
+    "./input": "./src/components/input/index.ts",
+    "./checkbox": "./src/components/checkbox/index.ts",
+    "./textarea": "./src/components/textarea/index.ts"
   },
   "scripts": {
     "lint": "eslint",
