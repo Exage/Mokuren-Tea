@@ -1,6 +1,4 @@
 import Image from 'next/image'
-import { Suspense } from 'react'
-import { connection } from 'next/server'
 import { getInitialCatalog } from '@/app/shared/api/requests/catalog.server'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { cmsText } from '@/app/shared/api/types/cms'
@@ -12,16 +10,7 @@ import { CatalogResults } from './components/catalog-results'
 import { CatalogQueryProvider } from './components/catalog-results/catalog-query-provider'
 import styles from './catalog.module.css'
 
-export function CatalogScreen() {
-  return (
-    <Suspense fallback={null}>
-      <CatalogContent />
-    </Suspense>
-  )
-}
-
-async function CatalogContent() {
-  await connection()
+export async function CatalogScreen() {
   const [page, catalog] = await Promise.all([getCmsPage('catalog'), getInitialCatalog()])
   const block = page.blocks['catalog.header']
   const content = block?.content

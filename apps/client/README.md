@@ -47,10 +47,20 @@ Add `<name>.hook.ts` beside them when the component needs state or interaction l
 
 Set `API_URL` to the backend API base URL, including `/api` (for example,
 `http://localhost:3001/api`). If unset, the client uses that local address.
-The Next.js server must be able to reach it at request time. Published CMS text
-is cached on the server with a five-minute revalidation interval; unpublished
-blocks use the existing default text. An unavailable API returns an error rather
-than silently presenting old defaults as published content.
+The API must be reachable during production builds and at runtime. Home, about,
+contacts, and the initial catalog are prerendered with their CMS content and
+initial product data, so their initial HTML contains the page content rather
+than a page-wide loading skeleton. A build fails if the required API data cannot
+be loaded.
+
+Published CMS content is cached on the server with a five-minute revalidation
+interval; unpublished blocks use the existing default text. Revalidation is
+triggered by traffic, not a timer: after that interval, a request can receive the
+cached content while it refreshes in the background. Publishing in the admin
+does not immediately invalidate the storefront cache. Cache entries expire after
+one hour, at which point fresh data is required. API failures are not converted
+into default published content; Next.js may continue serving previously cached
+content when background revalidation fails.
 
 For interactive catalog requests, set `NEXT_PUBLIC_API_URL` at **build time** to
 the publicly reachable backend API base URL, including `/api`. It defaults to

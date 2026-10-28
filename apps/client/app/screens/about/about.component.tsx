@@ -1,5 +1,3 @@
-import { Suspense } from 'react'
-import { connection } from 'next/server'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { cmsText } from '@/app/shared/api/types/cms'
 import Image from 'next/image'
@@ -10,16 +8,7 @@ import { Eyebrow } from '@/app/shared/components/eyebrow'
 import { Title } from '@/app/shared/components/title'
 import styles from './about.module.css'
 
-export function AboutScreen() {
-  return (
-    <Suspense fallback={null}>
-      <AboutContent />
-    </Suspense>
-  )
-}
-
-async function AboutContent() {
-  await connection()
+export async function AboutScreen() {
   const page = await getCmsPage('about')
   const block = page.blocks['about.content']
   const content = block?.content

@@ -1,6 +1,6 @@
 .reviews {
   display: grid;
-  grid-template-columns: 40fr 60fr;
+  grid-template-columns: 44fr 60fr;
   align-items: center;
   gap: 4.8rem;
   padding-block: 2.2rem 4rem;

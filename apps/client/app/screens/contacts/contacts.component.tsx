@@ -1,5 +1,3 @@
-import { Suspense } from 'react'
-import { connection } from 'next/server'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { cmsText } from '@/app/shared/api/types/cms'
 import { Button } from '@mokuren/ui/button'
@@ -28,16 +26,7 @@ function getLocation(value: unknown): { latitude: number; longitude: number } | 
   return { latitude, longitude }
 }
 
-export function ContactsScreen() {
-  return (
-    <Suspense fallback={null}>
-      <ContactsContent />
-    </Suspense>
-  )
-}
-
-async function ContactsContent() {
-  await connection()
+export async function ContactsScreen() {
   const page = await getCmsPage('contacts')
   const content = page.blocks['contacts.content']?.content
   const address = cmsText(content, 'address') || '12 Calm Lane, Minsk'

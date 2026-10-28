@@ -1,5 +1,3 @@
-import { Suspense } from 'react'
-import { connection } from 'next/server'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { Container } from '@/app/shared/components/container'
 import { Intro } from '@/app/screens/home/components/intro'
@@ -8,16 +6,7 @@ import { Products } from '@/app/screens/home/components/products'
 import { Visit } from '@/app/screens/home/components/visit'
 import styles from './home.module.css'
 
-export function HomeScreen() {
-  return (
-    <Suspense fallback={null}>
-      <HomeContent />
-    </Suspense>
-  )
-}
-
-async function HomeContent() {
-  await connection()
+export async function HomeScreen() {
   const page = await getCmsPage('home')
   const hero = page.blocks['home.hero']
   const visit = page.blocks['home.visitStore']

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useId, useRef, useState, type MouseEvent, type SyntheticEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { isServer, useQuery } from '@tanstack/react-query'
 import { catalogQueryOptions } from '@/app/shared/api/queries/catalog'
 import type { CatalogFilter, CatalogInitialData } from '@/app/shared/api/types/catalog'
 
@@ -46,6 +46,9 @@ export function useCatalogResultsHook(initial: CatalogInitialData) {
   const result = useQuery({
     ...catalogQueryOptions(filter),
     initialData: isDefault ? initial.products : undefined,
+    // Server freshness is managed by getInitialCatalog's cache. Avoid reading
+    // the clock during prerendering; the browser keeps its normal query lifetime.
+    ...(isServer && { initialDataUpdatedAt: 0, staleTime: 'static' as const }),
   })
   const filterCount = Number(Boolean(minPrice || maxPrice)) + tastes.length
   const hasFilters = Boolean(query.trim() || category || filterCount || sort !== 'new')

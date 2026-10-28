@@ -38,7 +38,29 @@ Browser routes live in `(web)`, which does not add a URL segment. For example,
 
 Each `page.tsx` only imports and renders its screen. JSX and layout belong in the
 screen component; state and interaction logic belong in its hook when needed.
-The current home screen is static and does not need a hook or `'use client'`.
+The home screen is an async Server Component and does not need a hook or
+`'use client'`.
+
+## Page rendering and loading
+
+Home, about, contacts, and the initial catalog await cached server request
+functions directly in their screen components. With Cache Components enabled,
+these results are included in the prerendered HTML. Do not put `connection()` or
+a page-wide loading wrapper around this shared content: it should be ready in
+the initial page response. The API must be available during production builds
+and at runtime for revalidation.
+
+Cache lifetimes belong in the server request functions, not duplicated across
+screens. CMS content and initial catalog data currently use a five-minute
+revalidation interval and a one-hour expiration. Updates are refreshed on
+subsequent traffic; publishing in the admin does not immediately invalidate
+these caches.
+
+Use a local `Suspense` boundary for content that genuinely depends on the
+incoming request or must stream independently. The dynamic product route keeps
+its `loading.tsx` because product slugs are not enumerated at build time.
+Interactive catalog filtering and pagination continue fetching in the browser
+after the initial server-rendered results.
 
 ## Component convention
 
