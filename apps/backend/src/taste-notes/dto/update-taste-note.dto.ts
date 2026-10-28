@@ -5,7 +5,7 @@ import { IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 // nullable; explicit null is rejected by the service. Unknown fields and an
 // empty body are rejected by the validation pipe / service.
 export class UpdateTasteNoteDto {
-  @ApiPropertyOptional({ example: 'Цветочный аромат' })
+  @ApiPropertyOptional({ example: 'Floral aroma' })
   @IsOptional()
   @IsString()
   @MaxLength(300)

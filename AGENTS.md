@@ -38,6 +38,8 @@ These rules apply to application code and shared packages throughout this monore
 
 ## Documentation
 
+- Use English for application interfaces, metadata, accessibility labels, and
+  API documentation examples throughout the project.
 - Write project documentation in English, including README files, setup guides, architecture notes, and documentation for applications and shared packages.
 
 ## Refactoring

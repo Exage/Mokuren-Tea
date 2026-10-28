@@ -19,11 +19,13 @@ pnpm install --frozen-lockfile
 ```text
 apps/backend/ — NestJS API and local MongoDB configuration
 apps/client/  — Next.js and React storefront with colocated CSS Modules
-packages/     — future shared packages and configuration
+apps/admin/   — separate Next.js administrative UI scaffold
+packages/ui/  — shared form controls and brand tokens for both frontends
 ```
 
 See [the backend guide](apps/backend/README.md) for configuration and commands.
 See [the client guide](apps/client/README.md) for UI development and architecture.
+See [the admin guide](apps/admin/README.md) for the scaffold and API integration plan.
 
 ## Local development
 
@@ -41,6 +43,8 @@ in `apps/backend/.env`.
 The API health endpoint is `http://localhost:3001/api/health`.
 The storefront is available at `http://localhost:3000`. To work on the UI alone,
 run `pnpm --filter client dev`; the current static screen does not require MongoDB.
+The admin scaffold is available at `http://localhost:3002`; run
+`pnpm --filter admin dev` to work on it without starting the backend.
 
 ## Commands
 

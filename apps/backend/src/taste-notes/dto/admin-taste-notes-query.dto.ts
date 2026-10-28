@@ -3,7 +3,7 @@ import { Type } from 'class-transformer'
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator'
 
 export class AdminTasteNotesQueryDto {
-  @ApiPropertyOptional({ example: 'цветоч' })
+  @ApiPropertyOptional({ example: 'flor' })
   @IsOptional()
   @IsString()
   @MaxLength(300)

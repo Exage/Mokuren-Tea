@@ -1,0 +1,47 @@
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1.4rem;
+  margin-bottom: 3.2rem;
+}
+.metric {
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+}
+.metric:hover {
+  border-color: var(--color-primary);
+}
+.metricLabel {
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+.value {
+  padding: 1.6rem 0;
+  font-family: var(--font-heading);
+  font-size: 4rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-primary);
+}
+.hint {
+  font-size: 1.3rem;
+  color: var(--color-text-muted);
+}
+@media (max-width: 1200px) {
+  .metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .metric {
+    padding: 1.6rem;
+  }
+}

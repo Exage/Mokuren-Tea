@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
 import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator'
 
 export class CreateTasteNoteDto {
-  @ApiProperty({ example: 'Цветочный' })
+  @ApiProperty({ example: 'Floral' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(300)
