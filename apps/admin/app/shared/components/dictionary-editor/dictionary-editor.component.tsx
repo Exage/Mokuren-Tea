@@ -1,4 +1,5 @@
 'use client'
+import { EditorModal } from '../editor-modal'
 import clsx from 'clsx'
 import { Button } from '@mokuren/ui/button'
 import { Input } from '@mokuren/ui/input'
@@ -11,23 +12,29 @@ import editorStyles from './dictionary-editor.module.css'
 
 export function DictionaryEditor({ kind }: { kind: DictionaryKind }) {
   const state = useDictionaryEditorHook(kind)
-  const { list, mutation, editing, deleting, nameInputRef, deleteHeadingRef } = state
+  const { list, mutation, editing, editorOpen, deleting, nameInputRef, deleteHeadingRef } = state
   const singular = kind === 'categories' ? 'category' : 'taste note'
+  const editorTitle = `${editing ? 'Edit' : 'New'} ${singular}`
   return (
     <div className={styles.stack}>
-      <CatalogFeedback error={mutation.error} notice={mutation.notice} />
-      <div className={styles.layout}>
+      <CatalogFeedback error={editorOpen ? undefined : mutation.error} notice={mutation.notice} />
+      <div className={deleting ? styles.layout : styles.stack}>
         <section className={clsx(styles.panel, styles.stack)} aria-label={`${kind} list`}>
+          <div className={styles.actions}>
+            <Button type="button" onClick={state.create} disabled={mutation.busy}>
+              New {singular}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={list.refresh}
+              disabled={mutation.busy || list.loading}
+            >
+              Refresh
+            </Button>
+          </div>
           <CatalogSearch onSubmit={list.search} disabled={mutation.busy} />
           <CatalogFeedback loading={list.loading} error={list.error} />
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={list.refresh}
-            disabled={mutation.busy || list.loading}
-          >
-            Refresh
-          </Button>
           <div>
             {list.data?.items.map((item) => (
               <div
@@ -138,59 +145,60 @@ export function DictionaryEditor({ kind }: { kind: DictionaryKind }) {
               </div>
             </section>
           )}
-          <div hidden={!!deleting}>
-            <section className={clsx(styles.panel, styles.stack)}>
-              <h2>{editing ? `Edit ${singular}` : `New ${singular}`}</h2>
-              <form
-                key={`${editing?.id || 'new'}-${state.formVersion}`}
-                onSubmit={state.save}
-                className={styles.stack}
-              >
-                <fieldset disabled={mutation.busy} className={styles.fields}>
-                  <label className={styles.field}>
-                    Name
-                    <Input
-                      ref={nameInputRef}
-                      name="name"
-                      defaultValue={editing?.name}
-                      required
-                      maxLength={300}
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    Slug
-                    <Input
-                      name="slug"
-                      defaultValue={editing?.slug}
-                      required
-                      maxLength={300}
-                      pattern="[a-z0-9]+(-[a-z0-9]+)*"
-                      placeholder="e.g. floral"
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    Display order
-                    <Input
-                      name="sortOrder"
-                      type="number"
-                      min={0}
-                      step={1}
-                      defaultValue={editing?.sortOrder || 0}
-                      required
-                    />
-                  </label>
-                  <div className={styles.actions}>
-                    <Button type="submit">{mutation.busy ? 'Saving…' : 'Save'}</Button>
-                    {editing && (
-                      <Button type="button" variant="ghost" onClick={() => state.setEditing(null)}>
-                        Cancel edit
+          {editorOpen && (
+            <EditorModal label={editorTitle} busy={mutation.busy} onClose={state.closeEditor}>
+              <CatalogFeedback floating error={mutation.error} />
+              <section className={clsx(styles.panel, styles.stack)}>
+                <h2>{editorTitle}</h2>
+                <form
+                  key={`${editing?.id || 'new'}-${state.formVersion}`}
+                  onSubmit={state.save}
+                  className={styles.stack}
+                >
+                  <fieldset disabled={mutation.busy} className={styles.fields}>
+                    <label className={styles.field}>
+                      Name
+                      <Input
+                        ref={nameInputRef}
+                        name="name"
+                        defaultValue={editing?.name}
+                        required
+                        maxLength={300}
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      Slug
+                      <Input
+                        name="slug"
+                        defaultValue={editing?.slug}
+                        required
+                        maxLength={300}
+                        pattern="[a-z0-9]+(-[a-z0-9]+)*"
+                        placeholder="e.g. floral"
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      Display order
+                      <Input
+                        name="sortOrder"
+                        type="number"
+                        min={0}
+                        step={1}
+                        defaultValue={editing?.sortOrder || 0}
+                        required
+                      />
+                    </label>
+                    <div className={styles.actions}>
+                      <Button type="submit">{mutation.busy ? 'Saving…' : 'Save'}</Button>
+                      <Button type="button" variant="ghost" onClick={state.closeEditor}>
+                        Cancel
                       </Button>
-                    )}
-                  </div>
-                </fieldset>
-              </form>
-            </section>
-          </div>
+                    </div>
+                  </fieldset>
+                </form>
+              </section>
+            </EditorModal>
+          )}
         </div>
       </div>
     </div>

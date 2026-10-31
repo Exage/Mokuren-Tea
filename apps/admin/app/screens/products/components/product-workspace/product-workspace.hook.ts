@@ -7,7 +7,8 @@ import {
   saveVariant,
   updateProduct,
 } from '@/app/shared/api/requests/products'
-import type { Product } from '@/app/shared/api/types/catalog'
+import type { MediaAsset, Product } from '@/app/shared/api/types/catalog'
+import { getMedia } from '@/app/shared/api/requests/media'
 import { useCatalogListHook, useCatalogMutationHook } from '@/app/shared/hooks/catalog-data.hook'
 
 export function useProductWorkspaceHook() {
@@ -17,14 +18,16 @@ export function useProductWorkspaceHook() {
   const list = useCatalogListHook(listProducts, status)
   const [selected, setSelected] = useState<Product | null | undefined>(undefined)
   const [discardTarget, setDiscardTarget] = useState<Product | null | undefined>(undefined)
+  const [closing, setClosing] = useState(false)
   const [dirty, setDirty] = useState(false)
   function changeStatus(value: string) {
     setStatus(value)
     list.setPage(1)
   }
-  function select(product: Product | null) {
+  function select(product: Product | null | undefined) {
     if (dirty) {
-      setDiscardTarget(product)
+      setClosing(product === undefined)
+      setDiscardTarget(product === undefined ? null : product)
     } else {
       setSelected(product)
       setEditorVersion((value) => value + 1)
@@ -32,7 +35,8 @@ export function useProductWorkspaceHook() {
   }
   function confirmDiscard() {
     setEditorVersion((value) => value + 1)
-    setSelected(discardTarget)
+    setSelected(closing ? undefined : discardTarget)
+    setClosing(false)
     setDiscardTarget(undefined)
     setDirty(false)
   }
@@ -67,10 +71,36 @@ export function useProductEditorHook(
   const [category, setCategory] = useState(product?.categoryId ? [product.categoryId] : [])
   const [notes, setNotes] = useState(product?.tasteNoteIds || [])
   const [images, setImages] = useState(product?.imageIds || [])
+  const [imageAssets, setImageAssets] = useState<Record<string, MediaAsset>>({})
+  const [imageError, setImageError] = useState('')
+  const [imageRevision, setImageRevision] = useState(0)
+  const imageIdsKey = JSON.stringify([...images].sort())
+  useEffect(() => {
+    const controller = new AbortController()
+    const ids = JSON.parse(imageIdsKey) as string[]
+    void Promise.allSettled(ids.map((id) => getMedia(id, controller.signal))).then((results) => {
+      if (controller.signal.aborted) {
+        return
+      }
+      const assets = results.flatMap((result) =>
+        result.status === 'fulfilled' ? [result.value] : []
+      )
+      setImageAssets((previous) => ({
+        ...previous,
+        ...Object.fromEntries(assets.map((asset) => [asset.id, asset])),
+      }))
+      setImageError(
+        results.some((result) => result.status === 'rejected')
+          ? 'Some image details could not be loaded. Please retry.'
+          : ''
+      )
+    })
+    return () => controller.abort()
+  }, [imageIdsKey, imageRevision])
   const [pendingStatus, setPendingStatus] = useState<'publish' | 'archive' | null>(null)
   const nameInputRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
-    nameInputRef.current?.focus()
+    nameInputRef.current?.focus({ preventScroll: true })
   }, [])
   function markFormDirty(event: FormEvent<HTMLFormElement>) {
     const target = event.target
@@ -119,6 +149,9 @@ export function useProductEditorHook(
       const result = product
         ? await updateProduct(product.id, input)
         : await createProduct({ ...input, slug: String(form.get('slug') || '').trim() })
+      setCategory(result.categoryId ? [result.categoryId] : [])
+      setNotes(result.tasteNoteIds)
+      setImages(result.imageIds)
       onSaved(result)
     }, 'Product saved.')
   }
@@ -126,32 +159,33 @@ export function useProductEditorHook(
     if (!product || !pendingStatus) {
       return
     }
-    void mutation.run(
-      async () => onSaved(await changeProductStatus(product.id, pendingStatus)),
-      'Product status updated.'
-    )
+    void mutation.run(async () => {
+      onSaved(await changeProductStatus(product.id, pendingStatus))
+      setPendingStatus(null)
+    }, 'Product status updated.')
   }
   function variant(event: FormEvent<HTMLFormElement>, variantId?: string) {
     event.preventDefault()
     if (!product) {
       return
     }
-    const form = new FormData(event.currentTarget)
-    void mutation.run(
-      async () =>
-        onSaved(
-          await saveVariant(
-            product.id,
-            {
-              weightGrams: Number(form.get('weight')),
-              price: Number(form.get('price')),
-              enabled: form.get('enabled') === 'on',
-            },
-            variantId
-          )
-        ),
-      'Pack size saved.'
-    )
+    const element = event.currentTarget
+    const form = new FormData(element)
+    void mutation.run(async () => {
+      const result = await saveVariant(
+        product.id,
+        {
+          weightGrams: Number(form.get('weight')),
+          price: Number(form.get('price')),
+          enabled: form.get('enabled') === 'on',
+        },
+        variantId
+      )
+      onSaved(result)
+      if (!variantId) {
+        element.reset()
+      }
+    }, 'Pack size saved.')
   }
   return {
     mutation,
@@ -160,6 +194,9 @@ export function useProductEditorHook(
     notes,
     changeNotes,
     images,
+    imageAssets,
+    imageError,
+    retryImages: () => setImageRevision((value) => value + 1),
     changeImages,
     moveImageEarlier,
     removeImage,

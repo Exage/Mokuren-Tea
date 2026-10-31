@@ -32,3 +32,27 @@
   min-width: 0;
   font-weight: 400;
 }
+
+.imageRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.2rem;
+  min-width: 0;
+}
+
+.thumbnail {
+  display: block;
+  flex: 0 0 8rem;
+  width: 8rem;
+  height: 8rem;
+  object-fit: contain;
+  border-radius: 0.6rem;
+  background: var(--color-surface);
+}
+
+.imageName {
+  flex: 1 1 16rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

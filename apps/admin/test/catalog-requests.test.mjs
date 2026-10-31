@@ -11,6 +11,7 @@ let api
 let products
 let media
 let inventory
+let cms
 let calls
 let replies
 let redirects
@@ -21,7 +22,7 @@ const originalCookieName = process.env.NEXT_PUBLIC_CSRF_TOKEN_NAME
 
 before(async () => {
   directory = await mkdtemp(join(tmpdir(), 'mokuren-catalog-test-'))
-  for (const name of ['admin-auth', 'catalog-request', 'products', 'media', 'inventory']) {
+  for (const name of ['admin-auth', 'catalog-request', 'products', 'media', 'inventory', 'cms']) {
     const source = await readFile(
       new URL(`../app/shared/api/requests/${name}.ts`, import.meta.url),
       'utf8'
@@ -37,6 +38,7 @@ before(async () => {
   products = await import(pathToFileURL(join(directory, 'products.mjs')))
   media = await import(pathToFileURL(join(directory, 'media.mjs')))
   inventory = await import(pathToFileURL(join(directory, 'inventory.mjs')))
+  cms = await import(pathToFileURL(join(directory, 'cms.mjs')))
 })
 
 beforeEach(() => {
@@ -185,4 +187,68 @@ test('preserves cancellation signals and avoids caching private data', async () 
   assert.equal(calls[0].signal.aborted, true)
   assert.equal(calls[0].cache, 'no-store')
   assert.equal(calls[0].credentials, 'include')
+})
+
+test('CMS draft carries its loaded version and never retries a stale save', async () => {
+  const block = { pageKey: 'home', blockKey: 'home.hero', draftVersion: 7 }
+  replies.push({ status: 409, body: { code: 'STALE_VERSION', message: 'Draft changed' } })
+  await assert.rejects(
+    cms.saveCmsDraft(block, { title: 'Tea stories' }),
+    (error) => error.code === 'STALE_VERSION'
+  )
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].url, '/api/admin/cms/blocks/home/home.hero/draft')
+  assert.equal(calls[0].method, 'PATCH')
+  assert.equal(calls[0].headers.get('X-CSRF-Token'), 'old-token')
+  assert.deepEqual(JSON.parse(calls[0].body), {
+    pageKey: 'home',
+    blockKey: 'home.hero',
+    content: { title: 'Tea stories' },
+    expectedDraftVersion: 7,
+  })
+})
+
+test('CMS publishing and restore send matching route and body keys', async () => {
+  const block = { pageKey: 'about', blockKey: 'about.content' }
+  replies.push(
+    { status: 201, body: { publishedVersion: 3 } },
+    { status: 201, body: { draftVersion: 9 } }
+  )
+  const published = await cms.publishCmsBlock(block)
+  const restored = await cms.restoreCmsRevision(block, 'revision-id')
+  assert.equal(published.publishedVersion, 3)
+  assert.equal(restored.draftVersion, 9)
+  assert.equal(calls[0].url, '/api/admin/cms/blocks/about/about.content/publish')
+  assert.equal(
+    calls[1].url,
+    '/api/admin/cms/blocks/about/about.content/revisions/revision-id/restore'
+  )
+  assert.deepEqual(JSON.parse(calls[0].body), block)
+  assert.deepEqual(JSON.parse(calls[1].body), { ...block, revisionId: 'revision-id' })
+})
+
+test('CMS preview uses the selected saved block and read requests are cancellable', async () => {
+  const block = { pageKey: 'home', blockKey: 'home.hero' }
+  const controller = new AbortController()
+  replies.push(
+    { body: { items: [] } },
+    { body: { items: [] } },
+    { body: { pageKey: 'home', blocks: { 'home.hero': { title: 'Saved draft' } } } }
+  )
+  await cms.listCmsBlocks(controller.signal)
+  await cms.listCmsRevisions(block, controller.signal)
+  const preview = await cms.previewCmsPage(block)
+  assert.equal(calls[0].url, '/api/admin/cms/blocks')
+  assert.equal(calls[1].url, '/api/admin/cms/blocks/home/home.hero/revisions')
+  assert.equal(calls[2].url, '/api/admin/cms/preview/home/home.hero')
+  assert.equal(preview.blocks['home.hero'].title, 'Saved draft')
+  controller.abort()
+  assert.equal(calls[0].signal.aborted, true)
+  assert.equal(calls[1].signal.aborted, true)
+})
+
+test('CMS publication is not retried after an uncertain response', async () => {
+  replies.push({ error: new TypeError('Connection lost') })
+  await assert.rejects(cms.publishCmsBlock({ pageKey: 'home', blockKey: 'home.hero' }))
+  assert.equal(calls.length, 1)
 })

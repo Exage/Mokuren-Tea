@@ -10,6 +10,12 @@ export function listMedia(query: ListQuery, signal?: AbortSignal) {
 export function uploadMedia(body: FormData) {
   return catalogRequest<MediaAsset>('media-assets', { method: 'POST', body })
 }
+export function getMedia(id: string, signal?: AbortSignal) {
+  return catalogRequest<MediaAsset>(`media-assets/${id}`, { signal })
+}
+export function replaceMediaImage(id: string, body: FormData) {
+  return catalogRequest<MediaAsset>(`media-assets/${id}/file`, { method: 'PUT', body })
+}
 export function updateMedia(id: string, input: { name: string; alt: string }) {
   return catalogRequest<MediaAsset>(`media-assets/${id}`, {
     method: 'PATCH',

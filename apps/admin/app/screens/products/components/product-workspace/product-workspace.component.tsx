@@ -1,4 +1,6 @@
 'use client'
+import Image from 'next/image'
+import { EditorModal } from '@/app/shared/components/editor-modal'
 import clsx from 'clsx'
 import { Button } from '@mokuren/ui/button'
 import { Input } from '@mokuren/ui/input'
@@ -23,21 +25,10 @@ export function ProductWorkspace() {
   const { list, mutation } = state
   return (
     <div className={styles.stack}>
-      <CatalogFeedback error={mutation.error} notice={mutation.notice} />
-      {state.discardTarget !== undefined && (
-        <section className={clsx(styles.panel, styles.stack)} aria-label="Unsaved changes">
-          <h2>Discard unsaved changes?</h2>
-          <p>Save this product before opening another, or discard your changes.</p>
-          <div className={styles.actions}>
-            <Button type="button" onClick={state.confirmDiscard}>
-              Discard changes
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => state.setDiscardTarget(undefined)}>
-              Keep editing
-            </Button>
-          </div>
-        </section>
-      )}
+      <CatalogFeedback
+        error={state.selected === undefined ? mutation.error : undefined}
+        notice={state.selected === undefined ? mutation.notice : undefined}
+      />
       <div className={styles.layout}>
         <section className={clsx(styles.panel, styles.stack)} aria-label="Product list">
           <div className={styles.actions}>
@@ -102,14 +93,39 @@ export function ProductWorkspace() {
           />
         </section>
         {state.selected !== undefined ? (
-          <ProductEditor
-            key={`${state.editorVersion}-${state.selected ? `${state.selected.id}-${state.selected.updatedAt}` : 'new'}`}
-            mutation={mutation}
-            product={state.selected}
-            onSaved={state.saved}
-            dirty={state.dirty}
-            onDirty={state.setDirty}
-          />
+          <EditorModal
+            label="Product editor"
+            busy={mutation.busy}
+            onClose={() => state.select(undefined)}
+          >
+            {state.discardTarget !== undefined && (
+              <section className={clsx(styles.panel, styles.stack)} aria-label="Unsaved changes">
+                <h2>Discard unsaved changes?</h2>
+                <p>Save this product before opening another, or discard your changes.</p>
+                <div className={styles.actions}>
+                  <Button type="button" onClick={state.confirmDiscard}>
+                    Discard changes
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => state.setDiscardTarget(undefined)}
+                  >
+                    Keep editing
+                  </Button>
+                </div>
+              </section>
+            )}
+            <CatalogFeedback floating error={mutation.error} notice={mutation.notice} />
+            <ProductEditor
+              key={state.editorVersion}
+              mutation={mutation}
+              product={state.selected}
+              onSaved={state.saved}
+              dirty={state.dirty}
+              onDirty={state.setDirty}
+            />
+          </EditorModal>
         ) : (
           <section className={styles.panel}>
             <h2>Your collection</h2>
@@ -139,6 +155,9 @@ function ProductEditor({
   const labels = Object.fromEntries(
     product?.images.map((image) => [image.id, image.alt || 'Product image']) || []
   )
+  for (const image of Object.values(state.imageAssets)) {
+    labels[image.id] = image.name || image.originalName
+  }
   return (
     <section className={clsx(styles.panel, styles.stack)} aria-label="Product editor">
       <h2>{product ? product.name : 'New product'}</h2>
@@ -214,24 +233,52 @@ function ProductEditor({
           {state.images.length > 0 && (
             <div className={styles.stack}>
               <p className={styles.muted}>Image order · The first image is the cover.</p>
-              {state.images.map((id, index) => (
-                <div className={styles.actions} key={id}>
-                  <span>
-                    {index + 1}. {labels[id] || id}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={index === 0}
-                    onClick={() => state.moveImageEarlier(index)}
-                  >
-                    Move earlier
-                  </Button>
-                  <Button type="button" variant="ghost" onClick={() => state.removeImage(id)}>
-                    Remove
-                  </Button>
-                </div>
-              ))}
+              <CatalogFeedback error={state.imageError} />
+              {state.imageError && (
+                <Button type="button" variant="ghost" onClick={state.retryImages}>
+                  Retry image details
+                </Button>
+              )}
+              {state.images.map((id, index) => {
+                const image = state.imageAssets[id]
+                const savedImage = product?.images.find((item) => item.id === id)
+                const url = image?.url || savedImage?.url
+                return (
+                  <div className={workspaceStyles.imageRow} key={id}>
+                    {url ? (
+                      <Image
+                        unoptimized
+                        className={workspaceStyles.thumbnail}
+                        src={url}
+                        alt={image?.alt || savedImage?.alt || ''}
+                        width={80}
+                        height={80}
+                      />
+                    ) : (
+                      <span
+                        className={workspaceStyles.thumbnail}
+                        aria-label="Image preview unavailable"
+                      />
+                    )}
+                    <span className={workspaceStyles.imageName}>
+                      {index + 1}. {labels[id] || id}
+                    </span>
+                    <div className={styles.actions}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={index === 0}
+                        onClick={() => state.moveImageEarlier(index)}
+                      >
+                        Move earlier
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => state.removeImage(id)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
           <Button type="submit">

@@ -26,3 +26,7 @@ export function saveVariant(productId: string, input: VariantInput, variantId?: 
     { method: variantId ? 'PATCH' : 'POST', body: JSON.stringify(input) }
   )
 }
+
+export function getProduct(id: string, signal?: AbortSignal) {
+  return catalogRequest<Product>(`products/${encodeURIComponent(id)}`, { signal })
+}

@@ -1,5 +1,6 @@
 import { Button } from '@mokuren/ui/button'
 import { Input } from '@mokuren/ui/input'
+import clsx from 'clsx'
 import type { FormEvent } from 'react'
 import type { Pagination } from '../../api/types/catalog'
 import styles from './catalog-ui.module.css'
@@ -8,20 +9,25 @@ export function CatalogFeedback({
   error,
   notice,
   loading,
+  floating = false,
 }: {
   error?: string
   notice?: string
   loading?: boolean
+  floating?: boolean
 }) {
   return (
     <>
       {error && (
-        <p role="alert" className={styles.error}>
+        <p
+          role="alert"
+          className={clsx(styles.error, floating && [styles.toast, styles.toastError])}
+        >
           {error}
         </p>
       )}
       {notice && (
-        <p role="status" className={styles.notice}>
+        <p role="status" className={styles.toast}>
           {notice}
         </p>
       )}
@@ -37,10 +43,11 @@ export function CatalogSearch({
   disabled?: boolean
 }) {
   return (
-    <form className={styles.actions} onSubmit={onSubmit} role="search">
+    <form className={styles.search} onSubmit={onSubmit} role="search">
       <label className={styles.field}>
         Search
         <Input
+          className={styles.searchInput}
           name="search"
           type="search"
           maxLength={300}

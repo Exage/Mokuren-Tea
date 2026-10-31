@@ -17,7 +17,10 @@ export function useCatalogListHook<T>(
     error: string
   } | null>(null)
   const loading = result?.request !== request
-  const data = loading ? null : result?.data || null
+  const data =
+    result?.request.query === request.query && result.request.status === request.status
+      ? result.data
+      : null
   const error = loading ? '' : result?.error || ''
   useEffect(() => {
     const controller = new AbortController()
@@ -64,6 +67,13 @@ export function useCatalogMutationHook() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  useEffect(() => {
+    if (!notice) {
+      return
+    }
+    const timer = window.setTimeout(() => setNotice(''), 5000)
+    return () => window.clearTimeout(timer)
+  }, [notice])
   async function run(action: () => Promise<void>, success: string) {
     if (lock.current) {
       return

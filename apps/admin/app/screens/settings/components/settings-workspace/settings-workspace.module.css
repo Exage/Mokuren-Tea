@@ -1,0 +1,52 @@
+.toolbar,
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.6rem;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2.4rem;
+  align-items: start;
+}
+
+.sectionHeading {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.contact {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(20rem, 2fr) auto;
+  align-items: end;
+  gap: 1.2rem;
+}
+
+.phone {
+  max-width: 38rem;
+}
+
+.footer {
+  border-top: 1px solid var(--color-border);
+  padding: 2rem 0;
+}
+
+@media (max-width: 900px) {
+  .columns,
+  .contact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contact {
+    padding-bottom: 1.6rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .contact > button {
+    justify-self: start;
+  }
+}

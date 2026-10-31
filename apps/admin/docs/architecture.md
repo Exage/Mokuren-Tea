@@ -22,7 +22,7 @@ tokens; headings use weight 600 and navigation uses weights 500 and 600.
 quick actions live under `screens/home/components/`, with their own CSS Modules
 and named exports. The two overview panels share a screen-local `OverviewPanel`
 for their section and heading styles. Static components do not need hooks.
-Products, media, and inventory compose interactive workspaces under their screen
+Products, media, inventory, and website content compose interactive workspaces under their screen
 folders. Categories and taste notes share a dictionary editor. The other screens
 compose `SectionPreview`, which owns its CSS. Put screen-specific components
 under `screens/<name>/components/`. Do not add empty CSS, hooks, or API directories.
@@ -74,3 +74,26 @@ Interactive state and callbacks live in colocated hooks.
 ESLint enforces braces around conditional bodies and rejects single-line blocks,
 in addition to the Next.js and TypeScript rules. Run Prettier separately to check
 the repository's formatting conventions.
+
+The content workspace edits the seven fixed CMS blocks through `cms.ts`. It uses
+field-specific forms, ready media references, and published product pickers
+(limited to four featured teas). Draft saves carry `expectedDraftVersion`.
+Conflicts keep local edits and require an explicit refresh; publish and restore
+require confirmation. Unsaved edits are guarded when switching blocks or
+refreshing content and on browser unload. The authenticated content preview uses
+the saved draft for the selected block and published content for the rest of
+the page; it is an editorial preview rather than the storefront layout.
+Publication history shows the latest 50 revisions exposed by the API.
+
+Settings is the single source for store identity, contact details, opening hours,
+and map coordinates. Website Content edits editorial fields only. Old contact
+fields are removed when loading an existing CMS draft into the editor, and
+legacy revisions remain publishable without restoring those fields. The
+Settings form accepts both coordinates together, including zero, and clearing
+both removes the storefront map. Changes appear after storefront cache refresh.
+
+Opening hours has two Settings variants: `hours` is the full schedule for
+Contacts (line breaks are preserved), and optional `hoursShort` is the compact
+schedule for the footer and home visit section. When `hoursShort` is empty,
+those compact placements continue using `hours`. The content migration can
+fill an absent `hoursShort` from the legacy published home visit schedule.

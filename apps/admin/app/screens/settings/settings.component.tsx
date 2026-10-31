@@ -1,19 +1,19 @@
 import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import { SettingsWorkspace } from './components/settings-workspace'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
 export async function SettingsScreen() {
   await requireAdminSession()
 
   return (
-    <SectionPreview
-      eyebrow="Administration"
-      title="Settings"
-      description="Keep your store information up to date."
-      features={[
-        'Edit the store name and tagline',
-        'Update contacts, address, and opening hours',
-        'Manage general store settings',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Administration"
+        title="Settings"
+        description="Keep your store information and contact details up to date."
+      />
+      <SettingsWorkspace />
+    </div>
   )
 }

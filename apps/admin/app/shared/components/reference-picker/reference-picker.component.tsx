@@ -14,6 +14,7 @@ export function ReferencePicker({
   values,
   onChange,
   multiple = false,
+  maxSelected = 50,
   exclude,
   labels = {},
   disabled = false,
@@ -23,6 +24,7 @@ export function ReferencePicker({
   values: string[]
   onChange: (values: string[]) => void
   multiple?: boolean
+  maxSelected?: number
   exclude?: string
   labels?: Record<string, string>
   disabled?: boolean
@@ -66,7 +68,9 @@ export function ReferencePicker({
           <label className={styles.check} key={item.id}>
             <Checkbox
               checked={values.includes(item.id)}
-              disabled={disabled || (!values.includes(item.id) && multiple && values.length >= 50)}
+              disabled={
+                disabled || (!values.includes(item.id) && multiple && values.length >= maxSelected)
+              }
               onChange={() =>
                 onChange(
                   values.includes(item.id)

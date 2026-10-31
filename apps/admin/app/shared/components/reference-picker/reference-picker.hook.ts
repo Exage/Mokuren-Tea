@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { listDictionary } from '../../api/requests/dictionaries'
+import { listProducts } from '../../api/requests/products'
 import { listMedia } from '../../api/requests/media'
 import type { DictionaryKind, ListQuery, Page } from '../../api/types/catalog'
 import { useCatalogListHook } from '../../hooks/catalog-data.hook'
 
-export type ReferenceKind = DictionaryKind | 'media'
+export type ReferenceKind = DictionaryKind | 'media' | 'products'
 export interface ReferenceOption {
   id: string
   name: string
@@ -18,7 +19,9 @@ export function useReferencePickerHook(kind: ReferenceKind) {
       const result =
         kind === 'media'
           ? await listMedia(query, signal)
-          : await listDictionary(kind, query, signal)
+          : kind === 'products'
+            ? await listProducts({ ...query, status: 'published' }, signal)
+            : await listDictionary(kind, query, signal)
       if (!signal.aborted) {
         setNames((previous) => ({
           ...previous,

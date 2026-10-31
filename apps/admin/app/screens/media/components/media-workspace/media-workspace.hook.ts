@@ -5,6 +5,7 @@ import {
   deleteMedia,
   listMedia,
   mediaUsages,
+  replaceMediaImage,
   updateMedia,
   uploadMedia,
 } from '@/app/shared/api/requests/media'
@@ -14,9 +15,33 @@ import { useCatalogListHook, useCatalogMutationHook } from '@/app/shared/hooks/c
 export function useMediaWorkspaceHook() {
   const list = useCatalogListHook(listMedia)
   const mutation = useCatalogMutationHook()
+  const [uploading, setUploading] = useState(false)
   const [editing, setEditing] = useState<MediaAsset | null>(null)
   const [deleting, setDeleting] = useState<MediaAsset | null>(null)
   const [usages, setUsages] = useState<MediaUsage[] | null>(null)
+  function openUpload() {
+    if (mutation.busy) {
+      return
+    }
+    setDeleting(null)
+    setEditing(null)
+    setUploading(true)
+  }
+  function edit(asset: MediaAsset) {
+    if (mutation.busy) {
+      return
+    }
+    setDeleting(null)
+    setUploading(false)
+    setEditing(asset)
+  }
+  function closeEditor() {
+    if (mutation.busy) {
+      return
+    }
+    setUploading(false)
+    setEditing(null)
+  }
   function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const element = event.currentTarget
@@ -35,6 +60,7 @@ export function useMediaWorkspaceHook() {
       }
       await uploadMedia(form)
       element.reset()
+      setUploading(false)
       list.refresh()
     }, 'Image uploaded.')
   }
@@ -45,10 +71,22 @@ export function useMediaWorkspaceHook() {
     }
     const form = new FormData(event.currentTarget)
     void mutation.run(async () => {
-      await updateMedia(editing.id, {
-        name: String(form.get('name') || '').trim(),
-        alt: String(form.get('alt') || ''),
-      })
+      const file = form.get('file')
+      if (file instanceof File && file.name) {
+        if (!file.size || file.size > 10 * 1024 * 1024) {
+          throw new AdminAuthError(
+            400,
+            'VALIDATION_ERROR',
+            'Choose a JPG, PNG, or WebP image up to 10 MB.'
+          )
+        }
+        await replaceMediaImage(editing.id, form)
+      } else {
+        await updateMedia(editing.id, {
+          name: String(form.get('name') || '').trim(),
+          alt: String(form.get('alt') || ''),
+        })
+      }
       setEditing(null)
       list.refresh()
     }, 'Image details saved.')
@@ -74,8 +112,11 @@ export function useMediaWorkspaceHook() {
   return {
     list,
     mutation,
+    uploading,
+    openUpload,
     editing,
-    setEditing,
+    edit,
+    closeEditor,
     deleting,
     setDeleting,
     usages,

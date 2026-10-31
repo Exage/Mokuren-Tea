@@ -17,6 +17,7 @@ export function useDictionaryEditorHook(kind: DictionaryKind) {
   )
   const list = useCatalogListHook(load)
   const mutation = useCatalogMutationHook()
+  const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<DictionaryEntry | null>(null)
   const [deleting, setDeleting] = useState<DictionaryEntry | null>(null)
   const [usageCount, setUsageCount] = useState<number | null>(null)
@@ -27,16 +28,32 @@ export function useDictionaryEditorHook(kind: DictionaryKind) {
   useEffect(() => {
     if (deleting) {
       deleteHeadingRef.current?.focus()
-    } else if (editing) {
+    } else if (editorOpen) {
       nameInputRef.current?.focus()
     }
-  }, [deleting, editing])
+  }, [deleting, editing, editorOpen])
+  function create() {
+    if (mutation.busy) {
+      return
+    }
+    setDeleting(null)
+    setEditing(null)
+    setEditorOpen(true)
+  }
+  function closeEditor() {
+    if (mutation.busy) {
+      return
+    }
+    setEditorOpen(false)
+    setEditing(null)
+  }
   function edit(entry: DictionaryEntry) {
     if (mutation.busy) {
       return
     }
     setDeleting(null)
     setEditing(entry)
+    setEditorOpen(true)
   }
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -52,6 +69,7 @@ export function useDictionaryEditorHook(kind: DictionaryKind) {
         editing?.id
       )
       setEditing(null)
+      setEditorOpen(false)
       setFormVersion((value) => value + 1)
       list.refresh()
     }, 'Saved successfully.')
@@ -90,7 +108,9 @@ export function useDictionaryEditorHook(kind: DictionaryKind) {
     list,
     mutation,
     editing,
-    setEditing,
+    editorOpen,
+    create,
+    closeEditor,
     deleting,
     setDeleting,
     usageCount,

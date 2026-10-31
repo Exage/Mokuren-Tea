@@ -1,0 +1,42 @@
+.card {
+  position: relative;
+}
+
+.card:has(.edit:hover:not(:disabled)) {
+  background: var(--color-accent-soft);
+}
+
+.card .edit {
+  min-width: 0;
+  justify-content: flex-start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.edit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.8rem;
+}
+
+.card .edit:focus-visible {
+  outline: none;
+}
+
+.edit:focus-visible::after {
+  outline: 0.3rem solid var(--color-primary);
+  outline-offset: 0.3rem;
+}
+
+.delete {
+  position: relative;
+  z-index: 1;
+}
