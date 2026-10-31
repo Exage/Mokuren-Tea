@@ -12,6 +12,7 @@ import {
   Patch,
   PayloadTooLargeException,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseFilters,
@@ -182,6 +183,35 @@ export class AdminMediaAssetsController {
     @CurrentAdmin() admin?: AdminRequestUser
   ): Promise<MediaAssetResponse> {
     return this.mediaAssetsService.update(id, dto, admin?.adminId)
+  }
+
+  @Put(':id/file')
+  @ApiOperation({ summary: 'Replace a ready image, preserving all product and CMS references' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        name: { type: 'string', maxLength: 255 },
+        alt: { type: 'string', maxLength: 500 },
+      },
+    },
+  })
+  @ApiOkResponse({ type: MediaAssetResponse })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 5 },
+    })
+  )
+  replaceFile(
+    @Param('id') id: string,
+    @UploadedFile() file: MulterFile | undefined,
+    @Body() dto: UpdateMediaAssetDto,
+    @CurrentAdmin() admin?: AdminRequestUser
+  ): Promise<MediaAssetResponse> {
+    return this.mediaAssetsService.replaceImageFile(id, file, dto, admin?.adminId)
   }
 
   @Get(':id/usages')

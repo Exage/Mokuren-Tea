@@ -28,6 +28,15 @@ export class MediaAsset {
   @Prop({ type: String, required: true })
   publicId!: string
 
+  @Prop({ type: String, default: null })
+  pendingReplacementId!: string | null
+
+  @Prop({ type: Date, default: null })
+  replacementStartedAt!: Date | null
+
+  @Prop({ type: [String], default: [] })
+  retiredPublicIds!: string[]
+
   @Prop({ type: Number, required: false, default: null })
   version!: number | null
 

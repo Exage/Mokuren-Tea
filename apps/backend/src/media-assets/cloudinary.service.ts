@@ -66,7 +66,11 @@ export class CloudinaryService {
     return `mokuren-tea-${environment}-${assetId}`
   }
 
-  async uploadImage(buffer: Uint8Array, publicId: string): Promise<CloudinaryUploadResult> {
+  async uploadImage(
+    buffer: Uint8Array,
+    publicId: string,
+    options: { preserveDimensions?: boolean } = {}
+  ): Promise<CloudinaryUploadResult> {
     const uploaded = await new Promise<Record<string, unknown>>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         {
@@ -74,7 +78,9 @@ export class CloudinaryService {
           resource_type: 'image',
           overwrite: false,
           unique_filename: false,
-          transformation: [{ width: 558, crop: 'scale' }],
+          ...(options.preserveDimensions
+            ? {}
+            : { transformation: [{ width: 558, crop: 'scale' }] }),
           // Dynamic folders: place the asset into the existing Cloudinary
           // folder instead of encoding the path into public_id.
           ...(this.assetFolder ? { asset_folder: this.assetFolder } : {}),

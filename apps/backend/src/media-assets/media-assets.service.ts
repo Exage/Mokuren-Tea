@@ -97,34 +97,11 @@ export class MediaAssetsService {
     file: UploadedFileInput | undefined,
     alt: string | undefined,
     adminId?: string,
-    name?: string
+    name?: string,
+    options: { preserveDimensions?: boolean } = {}
   ): Promise<MediaAssetView> {
-    if (!file || file.buffer.length === 0) {
-      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'File is required' })
-    }
-
-    if (file.size > MAX_UPLOAD_BYTES || file.buffer.length > MAX_UPLOAD_BYTES) {
-      throw new PayloadTooLargeException({
-        code: 'FILE_TOO_LARGE',
-        message: `File must not exceed ${MAX_UPLOAD_BYTES} bytes`,
-      })
-    }
-
-    const detected = detectImageFormat(file.buffer)
-
-    if (!detected) {
-      throw new UnsupportedMediaTypeException({
-        code: 'UNSUPPORTED_MEDIA_TYPE',
-        message: 'Only JPEG, PNG and WebP images are supported',
-      })
-    }
-
-    if (!this.cloudinary.isConfigured()) {
-      throw new ServiceUnavailableException({
-        code: 'SERVICE_UNAVAILABLE',
-        message: 'Image storage is not configured',
-      })
-    }
+    const { file: image, detected } = this.validateImageFile(file)
+    file = image
 
     const assetId = new Types.ObjectId()
     const publicId = this.cloudinary.buildPublicId(String(assetId))
@@ -156,7 +133,7 @@ export class MediaAssetsService {
     let uploaded: Awaited<ReturnType<CloudinaryService['uploadImage']>>
 
     try {
-      uploaded = await this.cloudinary.uploadImage(file.buffer, publicId)
+      uploaded = await this.cloudinary.uploadImage(file.buffer, publicId, options)
     } catch {
       await this.mediaAssetsRepository.markUploadFailed(assetId)
       await this.auditService.record({
@@ -214,6 +191,124 @@ export class MediaAssetsService {
     }
 
     return toMediaAssetView(updated)
+  }
+
+  private validateImageFile(file: UploadedFileInput | undefined) {
+    if (!file || file.buffer.length === 0) {
+      throw new BadRequestException({ code: 'VALIDATION_ERROR', message: 'File is required' })
+    }
+
+    if (file.size > MAX_UPLOAD_BYTES || file.buffer.length > MAX_UPLOAD_BYTES) {
+      throw new PayloadTooLargeException({
+        code: 'FILE_TOO_LARGE',
+        message: `File must not exceed ${MAX_UPLOAD_BYTES} bytes`,
+      })
+    }
+
+    const detected = detectImageFormat(file.buffer)
+
+    if (!detected) {
+      throw new UnsupportedMediaTypeException({
+        code: 'UNSUPPORTED_MEDIA_TYPE',
+        message: 'Only JPEG, PNG and WebP images are supported',
+      })
+    }
+
+    if (!this.cloudinary.isConfigured()) {
+      throw new ServiceUnavailableException({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Image storage is not configured',
+      })
+    }
+
+    return { file, detected }
+  }
+
+  async replaceImageFile(
+    id: string,
+    file: UploadedFileInput | undefined,
+    input: { name?: string; alt?: string },
+    adminId?: string
+  ): Promise<MediaAssetView> {
+    const { file: image, detected } = this.validateImageFile(file)
+    const objectId = toObjectId(id)
+    const existing = await this.mediaAssetsRepository.findById(objectId)
+    if (!existing) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Media asset not found' })
+    }
+    const pendingId = this.cloudinary.buildPublicId(String(new Types.ObjectId()))
+    const claimed = await this.mediaAssetsRepository.claimReplacement(
+      objectId,
+      existing.publicId,
+      pendingId
+    )
+    if (!claimed) {
+      throw new ConflictException({
+        code: 'CONFLICT',
+        message: 'Image is not ready or is already being replaced. Please retry.',
+      })
+    }
+
+    // Keep the ready file visible while the new binary uploads. Persist its
+    // identity first so reconciliation can clean up after a crash or timeout.
+    let updated: MediaAssetDocument | null
+    try {
+      const uploaded = await this.cloudinary.uploadImage(image.buffer, pendingId)
+      updated = await this.mediaAssetsRepository.completeReplacement(
+        objectId,
+        pendingId,
+        existing.publicId,
+        { ...uploaded, format: uploaded.format || detected.format },
+        image.originalname.trim().slice(0, 255) || 'upload',
+        detected.mimeType,
+        {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.alt !== undefined ? { alt: input.alt.trim() } : {}),
+        }
+      )
+    } catch {
+      // Release only the matching claim. If the switch already committed,
+      // this cannot queue the live image for deletion.
+      try {
+        await this.mediaAssetsRepository.releaseReplacement(objectId, pendingId)
+        const current = await this.mediaAssetsRepository.findById(objectId)
+        if (current) {
+          await this.cleanupRetiredFiles(current)
+        }
+      } catch {
+        // Reconciliation will recover the persisted claim if MongoDB is down.
+      }
+      throw new ServiceUnavailableException({
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'Image replacement could not be confirmed. Refresh the library before retrying.',
+      })
+    }
+    if (!updated) {
+      throw new ConflictException({
+        code: 'CONFLICT',
+        message: 'Image changed during replacement. Please refresh and retry.',
+      })
+    }
+    await this.auditService.record({
+      actorId: adminId || null,
+      action: 'media-asset.image-replaced',
+      entityType: 'media-asset',
+      entityId: id,
+      changes: { previousPublicId: existing.publicId, publicId: updated.publicId },
+    })
+    await this.cleanupRetiredFiles(updated)
+    return toMediaAssetView(updated)
+  }
+
+  private async cleanupRetiredFiles(asset: MediaAssetDocument): Promise<void> {
+    for (const publicId of asset.retiredPublicIds || []) {
+      try {
+        await this.cloudinary.destroyImage(publicId)
+        await this.mediaAssetsRepository.clearRetiredFile(asset._id, publicId)
+      } catch {
+        // A later reconciliation retries cleanup without reverting the image.
+      }
+    }
   }
 
   async list(query: { page?: number; limit?: number; search?: string; status?: string }): Promise<{
@@ -619,6 +714,30 @@ export class MediaAssetsService {
     const staleMs = options?.staleMs ?? 30 * 60 * 1000
     const limit = options?.limit ?? 100
     const cutoff = new Date(Date.now() - staleMs)
+
+    const replacementCleanup = await this.mediaAssetsRepository.findReplacementCleanup(
+      cutoff,
+      limit
+    )
+    for (const asset of replacementCleanup) {
+      if (
+        asset.pendingReplacementId &&
+        asset.replacementStartedAt &&
+        asset.replacementStartedAt < cutoff
+      ) {
+        // Release the stale claim before cleanup so a delayed upload cannot
+        // switch the asset to a file that this sweep is about to remove.
+        const pendingId = asset.pendingReplacementId
+        const released = await this.mediaAssetsRepository.releaseReplacement(asset._id, pendingId)
+        if (released.modifiedCount === 1) {
+          const current = await this.mediaAssetsRepository.findById(asset._id)
+          if (current) {
+            await this.cleanupRetiredFiles(current)
+          }
+        }
+      }
+      await this.cleanupRetiredFiles(asset)
+    }
 
     const stuckUploads = await this.mediaAssetsRepository.findStuckUploads(cutoff, limit)
 

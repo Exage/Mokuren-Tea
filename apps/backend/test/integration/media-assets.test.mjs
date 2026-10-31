@@ -224,7 +224,6 @@ test('stores, edits and searches a media name while preserving alt text', async 
     .set(authHeaders(adminToken))
     .send({ name: '   ' })
     .expect(400)
-
 })
 
 test('binds assets preserving order and rejects duplicates or non-ready links', async () => {
@@ -238,7 +237,7 @@ test('binds assets preserving order and rejects duplicates or non-ready links', 
   assert.deepEqual(created.body.imageIds, [a, b])
   assert.deepEqual(
     created.body.images.map((image) => image.id),
-    [a, b],
+    [a, b]
   )
   assert.ok(created.body.images[0].width > 0)
 
@@ -253,7 +252,7 @@ test('binds assets preserving order and rejects duplicates or non-ready links', 
   assert.deepEqual(reordered.body.imageIds, [b, a])
   assert.deepEqual(
     reordered.body.images.map((image) => image.id),
-    [b, a],
+    [b, a]
   )
 
   const still = await db.collection('mediaassets').findOne({ _id: new Types.ObjectId(a) })
@@ -443,7 +442,9 @@ test('keeps concurrent bind and delete consistent', async () => {
       .patch(`/api/admin/products/${productId}`)
       .set(authHeaders(adminToken))
       .send({ imageIds: [assetId] }),
-    request(app.getHttpServer()).delete(`/api/admin/media-assets/${assetId}`).set(authHeaders(adminToken)),
+    request(app.getHttpServer())
+      .delete(`/api/admin/media-assets/${assetId}`)
+      .set(authHeaders(adminToken)),
   ])
 
   const statuses = [bound.status, removed.status].sort()
@@ -609,4 +610,200 @@ test('returns optimized batch image URLs in the public catalog', async () => {
   assert.equal(card.body.images.length, 1)
   assert.ok(card.body.images[0].url.includes('f_auto,q_auto'))
   assert.ok(card.body.images[0].url.includes('w_1600'))
+})
+
+test('replaces an image used by published products and CMS without changing its identity', async () => {
+  const uploaded = await uploadImage('replace-original.jpg', 'Original alt')
+  const imageId = uploaded.body.id
+  const old = await db.collection('mediaassets').findOne({ _id: new Types.ObjectId(imageId) })
+  const draft = await createDraft(`replace-published-${Date.now()}`, [imageId])
+  await request(app.getHttpServer())
+    .patch(`/api/admin/products/${draft.body.id}`)
+    .set(authHeaders(adminToken))
+    .send({ categoryId: refs.categoryId })
+    .expect(200)
+  await request(app.getHttpServer())
+    .post(`/api/admin/products/${draft.body.id}/variants`)
+    .set(authHeaders(adminToken))
+    .send({ weightGrams: 50, price: 15.5 })
+    .expect(201)
+  await request(app.getHttpServer())
+    .post(`/api/admin/products/${draft.body.id}/publish`)
+    .set(authHeaders(adminToken))
+    .expect(201)
+  const blockId = new Types.ObjectId()
+  await db.collection('cmsblocks').insertOne({ _id: blockId, published: { imageId } })
+
+  const replaced = await request(app.getHttpServer())
+    .put(`/api/admin/media-assets/${imageId}/file`)
+    .set(authHeaders(adminToken))
+    .field('name', 'New tea photo')
+    .field('alt', 'New alt')
+    .attach('file', jpegBuffer(2048), 'replacement.jpg')
+    .expect(200)
+  assert.equal(replaced.body.id, imageId)
+  assert.equal(replaced.body.status, 'ready')
+  assert.equal(replaced.body.name, 'New tea photo')
+  assert.equal(replaced.body.alt, 'New alt')
+  assert.equal(replaced.body.sizeBytes, 2048)
+  assert.equal(replaced.body.usageCount, 1)
+  assert.notEqual(replaced.body.url, uploaded.body.url)
+  assert.equal(fake.store.has(old.publicId), false)
+  const block = await db.collection('cmsblocks').findOne({ _id: blockId })
+  assert.equal(block.published.imageId, imageId)
+  const product = await request(app.getHttpServer())
+    .get(`/api/products/${draft.body.slug}`)
+    .expect(200)
+  assert.equal(product.body.images[0].id, imageId)
+  assert.equal(product.body.images[0].alt, 'New alt')
+  const stored = await db.collection('mediaassets').findOne({ _id: new Types.ObjectId(imageId) })
+  assert.ok(product.body.images[0].url.includes(stored.publicId))
+  assert.equal(stored.pendingReplacementId, null)
+  assert.deepEqual(stored.retiredPublicIds, [])
+  assert.ok(
+    await db
+      .collection('auditlogs')
+      .findOne({ action: 'media-asset.image-replaced', entityId: imageId })
+  )
+})
+
+test('keeps the old image on upload failure and allows a retry', async () => {
+  const uploaded = await uploadImage('replace-failure.jpg', 'Keep this alt')
+  const id = uploaded.body.id
+  fake.state.failUpload = true
+  await request(app.getHttpServer())
+    .put(`/api/admin/media-assets/${id}/file`)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(), 'fail.jpg')
+    .expect(503)
+  const unchanged = await service.getById(id)
+  assert.equal(unchanged.url, uploaded.body.url)
+  assert.equal(unchanged.status, 'ready')
+  const retried = await request(app.getHttpServer())
+    .put(`/api/admin/media-assets/${id}/file`)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(), 'retry.jpg')
+    .expect(200)
+  assert.equal(retried.body.name, uploaded.body.name)
+  assert.equal(retried.body.alt, 'Keep this alt')
+})
+
+test('reconciles old file cleanup after a successful replacement', async () => {
+  const uploaded = await uploadImage('replace-cleanup.jpg')
+  const id = uploaded.body.id
+  const old = await db.collection('mediaassets').findOne({ _id: new Types.ObjectId(id) })
+  fake.state.failDestroy = true
+  const replaced = await request(app.getHttpServer())
+    .put(`/api/admin/media-assets/${id}/file`)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(), 'new.jpg')
+    .expect(200)
+  assert.notEqual(replaced.body.url, uploaded.body.url)
+  assert.equal(fake.store.has(old.publicId), true)
+  await service.reconcileStuck()
+  assert.equal(fake.store.has(old.publicId), false)
+  assert.equal((await service.getById(id)).url, replaced.body.url)
+})
+
+test('validates replacement uploads and guards deleted or missing images', async () => {
+  const uploaded = await uploadImage('replace-validation.jpg')
+  const path = `/api/admin/media-assets/${uploaded.body.id}/file`
+  await request(app.getHttpServer()).put(path).attach('file', jpegBuffer(), 'new.jpg').expect(401)
+  await request(app.getHttpServer()).put(path).set(authHeaders(adminToken)).expect(400)
+  await request(app.getHttpServer())
+    .put(path)
+    .set(authHeaders(adminToken))
+    .attach('file', Buffer.from('not an image'), 'new.txt')
+    .expect(415)
+  await request(app.getHttpServer())
+    .put(path)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(10 * 1024 * 1024 + 1), 'large.jpg')
+    .expect(413)
+  await request(app.getHttpServer())
+    .put(path)
+    .set(authHeaders(adminToken))
+    .field('name', '  ')
+    .attach('file', jpegBuffer(), 'new.jpg')
+    .expect(400)
+  await request(app.getHttpServer())
+    .put(`/api/admin/media-assets/${new Types.ObjectId()}/file`)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(), 'new.jpg')
+    .expect(404)
+  await request(app.getHttpServer())
+    .delete(`/api/admin/media-assets/${uploaded.body.id}`)
+    .set(authHeaders(adminToken))
+    .expect(202)
+  await request(app.getHttpServer())
+    .put(path)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(), 'new.jpg')
+    .expect(409)
+})
+
+test('keeps the ready image available and rejects competing replacement or deletion during upload', async () => {
+  const uploaded = await uploadImage('replace-concurrency.jpg')
+  const id = uploaded.body.id
+  const originalUpload = fake.uploadImage
+  let resume
+  let notifyStarted
+  const paused = new Promise((resolve) => {
+    resume = resolve
+  })
+  const started = new Promise((resolve) => {
+    notifyStarted = resolve
+  })
+  fake.uploadImage = async (...args) => {
+    notifyStarted()
+    await paused
+    return originalUpload(...args)
+  }
+  const replacing = request(app.getHttpServer())
+    .put(`/api/admin/media-assets/${id}/file`)
+    .set(authHeaders(adminToken))
+    .attach('file', jpegBuffer(), 'replacement.jpg')
+    .then((response) => response)
+  try {
+    await started
+    assert.equal((await service.getById(id)).url, uploaded.body.url)
+    await request(app.getHttpServer())
+      .put(`/api/admin/media-assets/${id}/file`)
+      .set(authHeaders(adminToken))
+      .attach('file', jpegBuffer(), 'competing.jpg')
+      .expect(409)
+    await request(app.getHttpServer())
+      .delete(`/api/admin/media-assets/${id}`)
+      .set(authHeaders(adminToken))
+      .expect(409)
+  } finally {
+    resume()
+    fake.uploadImage = originalUpload
+  }
+  assert.equal((await replacing).status, 200)
+})
+
+test('recovers an interrupted replacement while preserving the original ready file', async () => {
+  const uploaded = await uploadImage('replace-interrupted.jpg')
+  const id = uploaded.body.id
+  const pendingId = fake.buildPublicId(String(new Types.ObjectId()))
+  await fake.uploadImage(jpegBuffer(), pendingId)
+  await db.collection('mediaassets').updateOne(
+    { _id: new Types.ObjectId(id) },
+    {
+      $set: {
+        pendingReplacementId: pendingId,
+        replacementStartedAt: new Date(Date.now() - 3600_000),
+      },
+    }
+  )
+  fake.state.failDestroy = true
+  await service.reconcileStuck()
+  const released = await db.collection('mediaassets').findOne({ _id: new Types.ObjectId(id) })
+  assert.equal(released.pendingReplacementId, null)
+  assert.ok(released.retiredPublicIds.includes(pendingId))
+  assert.equal((await service.getById(id)).url, uploaded.body.url)
+  await service.reconcileStuck()
+  assert.equal(fake.store.has(pendingId), false)
+  assert.equal((await service.getById(id)).url, uploaded.body.url)
 })

@@ -88,6 +88,79 @@ export class MediaAssetsRepository {
     return asset.save()
   }
 
+  claimReplacement(id: Types.ObjectId, publicId: string, pendingId: string) {
+    return this.assetModel
+      .findOneAndUpdate(
+        { _id: id, status: 'ready', publicId, pendingReplacementId: null },
+        { $set: { pendingReplacementId: pendingId, replacementStartedAt: new Date() } },
+        { returnDocument: 'after' }
+      )
+      .exec()
+  }
+
+  completeReplacement(
+    id: Types.ObjectId,
+    pendingId: string,
+    oldPublicId: string,
+    uploaded: CloudinaryUploadResult,
+    originalName: string,
+    mimeType: string,
+    input: { name?: string; alt?: string }
+  ) {
+    return this.assetModel
+      .findOneAndUpdate(
+        { _id: id, status: 'ready', publicId: oldPublicId, pendingReplacementId: pendingId },
+        {
+          $set: {
+            publicId: uploaded.publicId,
+            cloudinaryAssetId: uploaded.assetId || null,
+            version: uploaded.version,
+            secureUrl: uploaded.secureUrl,
+            originalName,
+            format: uploaded.format,
+            mimeType,
+            sizeBytes: uploaded.bytes,
+            width: uploaded.width,
+            height: uploaded.height,
+            ...input,
+            pendingReplacementId: null,
+            replacementStartedAt: null,
+          },
+          $push: { retiredPublicIds: oldPublicId },
+        },
+        { returnDocument: 'after' }
+      )
+      .exec()
+  }
+
+  releaseReplacement(id: Types.ObjectId, pendingId: string) {
+    return this.assetModel
+      .updateOne(
+        { _id: id, pendingReplacementId: pendingId },
+        {
+          $set: { pendingReplacementId: null, replacementStartedAt: null },
+          $addToSet: { retiredPublicIds: pendingId },
+        }
+      )
+      .exec()
+  }
+
+  clearRetiredFile(id: Types.ObjectId, publicId: string) {
+    return this.assetModel.updateOne({ _id: id }, { $pull: { retiredPublicIds: publicId } }).exec()
+  }
+
+  findReplacementCleanup(cutoff: Date, limit: number) {
+    return this.assetModel
+      .find({
+        $or: [
+          { pendingReplacementId: { $type: 'string' }, replacementStartedAt: { $lt: cutoff } },
+          { 'retiredPublicIds.0': { $exists: true } },
+        ],
+      })
+      .limit(limit)
+      .exec()
+  }
+
   async findProductUsages(objectId: Types.ObjectId) {
     const db = this.connection.db
 
@@ -117,7 +190,10 @@ export class MediaAssetsRepository {
     // All saved revisions referencing this asset via content.imageId.
     const cmsRevisions = await db
       .collection('cmsrevisions')
-      .find({ 'content.imageId': String(objectId) }, { projection: { pageKey: 1, blockKey: 1, version: 1 } })
+      .find(
+        { 'content.imageId': String(objectId) },
+        { projection: { pageKey: 1, blockKey: 1, version: 1 } }
+      )
       .limit(200)
       .toArray()
 
@@ -146,12 +222,12 @@ export class MediaAssetsRepository {
       .countDocuments({ imageIds: assetId }, { session: session || undefined })
 
     // CMS blocks (draft or published) referencing this asset via imageId.
-    const cmsBlockCount = await db
-      .collection('cmsblocks')
-      .countDocuments({
+    const cmsBlockCount = await db.collection('cmsblocks').countDocuments(
+      {
         $or: [{ 'draft.imageId': String(assetId) }, { 'published.imageId': String(assetId) }],
       },
-      { session: session || undefined })
+      { session: session || undefined }
+    )
 
     // All saved revisions referencing this asset via content.imageId.
     const cmsRevisionCount = await db
@@ -164,7 +240,7 @@ export class MediaAssetsRepository {
   claimDeletion(objectId: Types.ObjectId, session: ClientSession) {
     return this.assetModel
       .updateOne(
-        { _id: objectId, status: 'ready', usageCount: 0 },
+        { _id: objectId, status: 'ready', usageCount: 0, pendingReplacementId: null },
         { $set: { status: 'deleting' } },
         { session }
       )
@@ -233,10 +309,9 @@ export class MediaAssetsRepository {
     }
 
     // Count CMS block usages (draft and published).
-    const cmsCursor = db.collection('cmsblocks').find(
-      {},
-      { projection: { 'draft.imageId': 1, 'published.imageId': 1 } }
-    )
+    const cmsCursor = db
+      .collection('cmsblocks')
+      .find({}, { projection: { 'draft.imageId': 1, 'published.imageId': 1 } })
 
     for await (const block of cmsCursor) {
       for (const field of ['draft', 'published'] as const) {
@@ -250,10 +325,9 @@ export class MediaAssetsRepository {
     }
 
     // Count revision usages.
-    const revisionCursor = db.collection('cmsrevisions').find(
-      {},
-      { projection: { 'content.imageId': 1 } }
-    )
+    const revisionCursor = db
+      .collection('cmsrevisions')
+      .find({}, { projection: { 'content.imageId': 1 } })
 
     for await (const revision of revisionCursor) {
       const imageId = revision.content?.imageId

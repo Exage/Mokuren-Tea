@@ -49,11 +49,12 @@ test('requests proportional resizing of uploaded images to 558 pixels wide', asy
   t.mock.method(cloudinary.uploader, 'upload_stream', (uploadOptions, callback) => {
     options = uploadOptions
     return {
-      end: () => callback(null, {
-        secure_url: 'https://example.com/image.jpg',
-        width: 558,
-        height: 372,
-      }),
+      end: () =>
+        callback(null, {
+          secure_url: 'https://example.com/image.jpg',
+          width: 558,
+          height: 372,
+        }),
     }
   })
   const service = new CloudinaryService(configStub({}))
@@ -62,4 +63,22 @@ test('requests proportional resizing of uploaded images to 558 pixels wide', asy
   assert.deepEqual(options.transformation, [{ width: 558, crop: 'scale' }])
   assert.equal(result.width, 558)
   assert.equal(result.height, 372)
+})
+
+test('preserves source dimensions for storefront media imports', async (t) => {
+  let options
+  t.mock.method(cloudinary.uploader, 'upload_stream', (uploadOptions, callback) => {
+    options = uploadOptions
+    return {
+      end: () =>
+        callback(null, { secure_url: 'https://example.com/banner.jpg', width: 1600, height: 900 }),
+    }
+  })
+  const service = new CloudinaryService(configStub({}))
+  const result = await service.uploadImage(new Uint8Array([1]), 'banner-id', {
+    preserveDimensions: true,
+  })
+  assert.equal(options.transformation, undefined)
+  assert.equal(result.width, 1600)
+  assert.equal(result.height, 900)
 })
