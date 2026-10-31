@@ -1,7 +1,15 @@
 'use client'
 
-import { useEffect, useId, useRef, useState, type MouseEvent, type SyntheticEvent } from 'react'
-import { isServer, useQuery } from '@tanstack/react-query'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type MouseEvent,
+  type SyntheticEvent,
+} from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { catalogQueryOptions } from '@/app/shared/api/queries/catalog'
 import type { CatalogFilter, CatalogInitialData } from '@/app/shared/api/types/catalog'
 
@@ -12,7 +20,14 @@ export const SORT_OPTIONS = [
   { value: 'price-desc', label: 'Price: High to Low' },
 ] as const
 
+const subscribeHydration = () => () => {}
+
 export function useCatalogResultsHook(initial: CatalogInitialData) {
+  const hasHydrated = useSyncExternalStore(
+    subscribeHydration,
+    () => true,
+    () => false
+  )
   const id = useId()
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('')
@@ -46,9 +61,10 @@ export function useCatalogResultsHook(initial: CatalogInitialData) {
   const result = useQuery({
     ...catalogQueryOptions(filter),
     initialData: isDefault ? initial.products : undefined,
-    // Server freshness is managed by getInitialCatalog's cache. Avoid reading
-    // the clock during prerendering; the browser keeps its normal query lifetime.
-    ...(isServer && { initialDataUpdatedAt: 0, staleTime: 'static' as const }),
+    initialDataUpdatedAt: 0,
+    enabled: hasHydrated,
+    // Keep the server and hydration render identical before checking live stock.
+    ...(!hasHydrated && { staleTime: 'static' as const }),
   })
   const filterCount = Number(Boolean(minPrice || maxPrice)) + tastes.length
   const hasFilters = Boolean(query.trim() || category || filterCount || sort !== 'new')

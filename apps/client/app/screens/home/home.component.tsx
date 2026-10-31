@@ -1,3 +1,4 @@
+import { getStoreSettings } from '@/app/shared/api/requests/store-settings'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { Container } from '@/app/shared/components/container'
 import { Intro } from '@/app/screens/home/components/intro'
@@ -7,7 +8,7 @@ import { Visit } from '@/app/screens/home/components/visit'
 import styles from './home.module.css'
 
 export async function HomeScreen() {
-  const page = await getCmsPage('home')
+  const [page, settings] = await Promise.all([getCmsPage('home'), getStoreSettings()])
   const hero = page.blocks['home.hero']
   const visit = page.blocks['home.visitStore']
   const testimonials = page.blocks['home.testimonials']?.content
@@ -15,10 +16,10 @@ export async function HomeScreen() {
   return (
     <main className={styles.home}>
       <Container>
-        <Intro content={hero?.content} image={hero?.image} />
+        <Intro content={hero?.content} image={hero?.image} name={settings?.name || 'Tea store'} />
         <Reviews content={testimonials} />
         <Products block={page.blocks['home.featuredTeas']} />
-        <Visit content={visit?.content} image={visit?.image} />
+        <Visit content={visit?.content} image={visit?.image} settings={settings} />
       </Container>
     </main>
   )

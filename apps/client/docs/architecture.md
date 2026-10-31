@@ -54,11 +54,13 @@ Cache lifetimes belong in the server request functions, not duplicated across
 screens. CMS content and initial catalog data currently use a five-minute
 revalidation interval and a one-hour expiration. Updates are refreshed on
 subsequent traffic; publishing in the admin does not immediately invalidate
-these caches.
+these caches. The catalog rechecks live product data in the browser on mount
+and window focus, so cached availability does not persist for the cache lifetime.
 
 Use a local `Suspense` boundary for content that genuinely depends on the
 incoming request or must stream independently. The dynamic product route keeps
 its `loading.tsx` because product slugs are not enumerated at build time.
+Product detail requests use `no-store` so each page request reads current stock.
 Interactive catalog filtering and pagination continue fetching in the browser
 after the initial server-rendered results.
 
@@ -208,3 +210,18 @@ pnpm --filter client typecheck
 pnpm --filter client build
 pnpm exec prettier apps/client --check
 ```
+
+## Shared store information
+
+`getStoreSettings()` reads `/public/store-settings` with the same five-minute
+revalidation policy as CMS content. Store name, tagline, address, opening hours,
+phone, contact links, and map coordinates come exclusively from Settings.
+Header, footer, contacts, the home visit section, and metadata reuse these values.
+Missing optional values are hidden; fictional contact details and example map
+coordinates are never substituted. CMS owns editorial copy and images only.
+
+Opening hours has two Settings variants: `hours` is the full schedule for
+Contacts (line breaks are preserved), and optional `hoursShort` is the compact
+schedule for the footer and home visit section. When `hoursShort` is empty,
+those compact placements continue using `hours`. The content migration can
+fill an absent `hoursShort` from the legacy published home visit schedule.

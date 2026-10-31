@@ -9,7 +9,9 @@ import styles from './intro.module.css'
 export function Intro({
   content,
   image,
+  name,
 }: {
+  name: string
   content?: Record<string, unknown> | null
   image?: PublicImage | null
 }) {
@@ -29,7 +31,7 @@ export function Intro({
       />
       <div className={styles.content}>
         <Eyebrow className={styles.eyebrow}>
-          {cmsText(content, 'eyebrow') || 'Welcome to Mokuren Tea'}
+          {cmsText(content, 'eyebrow') || `Welcome to ${name}`}
         </Eyebrow>
         <Title id="intro-title" size="3xl">
           {cmsText(content, 'title') || 'Find your moment of calm.'}

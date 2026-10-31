@@ -13,6 +13,7 @@ test('catalog query sends filters and page to the public API', async () => {
   globalThis.fetch = async (input, options) => {
     url = new URL(input)
     assert.equal(options.signal, signal)
+    assert.equal(options.cache, 'no-store')
     return new Response(JSON.stringify({ items: [], pagination: { page: 2 } }), { status: 200 })
   }
   await getCatalogProducts(

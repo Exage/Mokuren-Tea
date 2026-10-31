@@ -9,10 +9,11 @@ import { useHeaderHook } from './header.hook'
 import styles from './header.module.css'
 
 export type HeaderProps = ComponentPropsWithoutRef<'header'> & {
+  name: string
   bagCount?: number
 }
 
-export function Header({ className, bagCount = 0, ...props }: HeaderProps) {
+export function Header({ className, name, bagCount = 0, ...props }: HeaderProps) {
   const {
     pathname,
     mobilePanelId,
@@ -40,7 +41,7 @@ export function Header({ className, bagCount = 0, ...props }: HeaderProps) {
       aria-label={isMenuOpen ? 'Navigation menu' : props['aria-label']}
     >
       <Container className={styles.inner}>
-        <Link href="/" className={styles.brand} aria-label="Mokuren Tea home" onClick={closeMenu}>
+        <Link href="/" className={styles.brand} aria-label={`${name} home`} onClick={closeMenu}>
           <span className={styles.brandMark} aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M4 10h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-6Z" />
@@ -48,7 +49,7 @@ export function Header({ className, bagCount = 0, ...props }: HeaderProps) {
               <path d="M8 6c0-1.5 1-1.5 1-3M12 6c0-1.5 1-1.5 1-3" />
             </svg>
           </span>
-          <span>Mokuren Tea</span>
+          <span>{name}</span>
         </Link>
 
         <nav className={styles.nav} aria-label="Primary">

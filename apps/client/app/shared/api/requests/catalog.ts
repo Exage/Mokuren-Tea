@@ -1,7 +1,7 @@
 import type { CatalogFilter, CatalogOption, CatalogResponse } from '../types/catalog'
 
 async function readJson<T>(url: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(url, { signal })
+  const response = await fetch(url, { signal, cache: 'no-store' })
   if (!response.ok) {
     throw new Error(`Catalog request failed (HTTP ${response.status})`)
   }

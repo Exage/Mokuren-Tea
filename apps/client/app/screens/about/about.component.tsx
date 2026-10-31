@@ -1,3 +1,4 @@
+import { getStoreSettings } from '@/app/shared/api/requests/store-settings'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { cmsText } from '@/app/shared/api/types/cms'
 import Image from 'next/image'
@@ -9,7 +10,7 @@ import { Title } from '@/app/shared/components/title'
 import styles from './about.module.css'
 
 export async function AboutScreen() {
-  const page = await getCmsPage('about')
+  const [page, settings] = await Promise.all([getCmsPage('about'), getStoreSettings()])
   const block = page.blocks['about.content']
   const content = block?.content
 
@@ -24,7 +25,7 @@ export async function AboutScreen() {
             </Title>
             <Description className={styles.description}>
               {cmsText(content, 'body') ||
-                'At Mokuren Tea, we believe a good cup of tea is an invitation to slow down. Our collection brings together familiar favorites and distinctive discoveries, chosen for the moments they create.'}
+                `At ${settings?.name || 'our store'}, we believe a good cup of tea is an invitation to slow down. Our collection brings together familiar favorites and distinctive discoveries, chosen for the moments they create.`}
             </Description>
             {!cmsText(content, 'body') && (
               <Description className={styles.details}>

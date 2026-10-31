@@ -1,4 +1,5 @@
 import { cmsText, type PublicImage } from '@/app/shared/api/types/cms'
+import type { StoreSettings } from '@/app/shared/api/types/store-settings'
 import Image from 'next/image'
 import { Button } from '@mokuren/ui/button'
 import { Description } from '@/app/shared/components/description'
@@ -9,10 +10,13 @@ import styles from './visit.module.css'
 export function Visit({
   content,
   image,
+  settings,
 }: {
+  settings: StoreSettings | null
   content?: Record<string, unknown> | null
   image?: PublicImage | null
 }) {
+  const hours = settings?.hoursShort || settings?.hours
   return (
     <section className={styles.visit} aria-labelledby="visit-title">
       <div className={styles.content}>
@@ -28,18 +32,20 @@ export function Visit({
         </Description>
 
         <dl className={styles.details}>
-          <div className={styles.detail}>
-            <dt className={styles.label}>Address</dt>
-            <dd className={styles.value}>
-              <address className={styles.address}>
-                {cmsText(content, 'address') || '12 Calm Lane, Minsk'}
-              </address>
-            </dd>
-          </div>
-          <div className={styles.detail}>
-            <dt className={styles.label}>Opening hours</dt>
-            <dd className={styles.value}>{cmsText(content, 'hours') || 'Daily, 10:00–20:00'}</dd>
-          </div>
+          {settings?.address && (
+            <div className={styles.detail}>
+              <dt className={styles.label}>Address</dt>
+              <dd className={styles.value}>
+                <address className={styles.address}>{settings?.address}</address>
+              </dd>
+            </div>
+          )}
+          {hours && (
+            <div className={styles.detail}>
+              <dt className={styles.label}>Opening hours</dt>
+              <dd className={styles.value}>{hours}</dd>
+            </div>
+          )}
         </dl>
 
         <Button href="/contacts" variant="outlineLight">

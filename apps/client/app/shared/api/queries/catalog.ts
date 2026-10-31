@@ -11,6 +11,6 @@ export function catalogQueryOptions(filter: CatalogFilter) {
         filter,
         signal
       ),
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   })
 }

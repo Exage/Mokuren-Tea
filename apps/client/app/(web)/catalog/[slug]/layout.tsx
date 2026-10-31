@@ -7,7 +7,7 @@ export async function generateMetadata({
 }: LayoutProps<'/catalog/[slug]'>): Promise<Metadata> {
   const { slug } = await params
   const product = await getProduct(slug)
-  return product ? { title: `${product.name} — Mokuren Tea`, description: product.description } : {}
+  return product ? { title: product.name, description: product.description } : {}
 }
 
 export default function ProductLayout({ children }: { children: ReactNode }) {

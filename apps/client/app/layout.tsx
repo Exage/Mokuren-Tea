@@ -1,3 +1,4 @@
+import { getStoreSettings } from '@/app/shared/api/requests/store-settings'
 import type { Metadata } from 'next'
 import { Suspense, type ReactNode } from 'react'
 import clsx from 'clsx'
@@ -19,22 +20,29 @@ const bodyFont = Inter({
   display: 'swap',
 })
 
-export const metadata: Metadata = {
-  title: 'Mokuren Tea',
-  description: 'Japanese tea. A moment of calm, one cup at a time.',
+export async function generateMetadata(): Promise<Metadata> {
+  const settings = await getStoreSettings()
+  return {
+    title: {
+      default: settings?.name || 'Tea store',
+      template: `%s — ${settings?.name || 'Tea store'}`,
+    },
+    description: settings?.tagline || undefined,
+  }
 }
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const settings = await getStoreSettings()
   return (
     <html lang="en" className={clsx(headingFont.variable, bodyFont.variable)}>
       <body className={styles.body}>
         <Suspense fallback={null}>
-          <Header />
+          <Header name={settings?.name || 'Tea store'} />
         </Suspense>
 
         {children}
 
-        <Footer />
+        <Footer settings={settings} />
       </body>
     </html>
   )

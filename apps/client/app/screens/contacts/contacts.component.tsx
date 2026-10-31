@@ -1,3 +1,5 @@
+import { StoreContacts } from '@/app/shared/components/store-contacts'
+import { getStoreSettings } from '@/app/shared/api/requests/store-settings'
 import { getCmsPage } from '@/app/shared/api/requests/cms'
 import { cmsText } from '@/app/shared/api/types/cms'
 import { Button } from '@mokuren/ui/button'
@@ -6,35 +8,12 @@ import { Eyebrow } from '@/app/shared/components/eyebrow'
 import { Title } from '@/app/shared/components/title'
 import styles from './contacts.module.css'
 
-const DEMO_LOCATION = { latitude: 53.9053, longitude: 27.5619 }
-
-function getLocation(value: unknown): { latitude: number; longitude: number } | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-  const { latitude, longitude } = value as Record<string, unknown>
-  if (
-    typeof latitude !== 'number' ||
-    !Number.isFinite(latitude) ||
-    Math.abs(latitude) > 85.0511 ||
-    typeof longitude !== 'number' ||
-    !Number.isFinite(longitude) ||
-    Math.abs(longitude) > 180
-  ) {
-    return null
-  }
-  return { latitude, longitude }
-}
-
 export async function ContactsScreen() {
-  const page = await getCmsPage('contacts')
+  const [page, settings] = await Promise.all([getCmsPage('contacts'), getStoreSettings()])
   const content = page.blocks['contacts.content']?.content
-  const address = cmsText(content, 'address') || '12 Calm Lane, Minsk'
-  const hours = cmsText(content, 'hours') || 'Daily 10:00–20:00'
-  const phone = cmsText(content, 'phone') || '+375 29 123-45-67'
-  const email = cmsText(content, 'email') || 'hello@mokuren-tea.example'
-  const configuredLocation = getLocation(content?.location)
-  const { latitude, longitude } = configuredLocation || DEMO_LOCATION
+
+  const configuredLocation = settings?.location
+  const { latitude = 0, longitude = 0 } = configuredLocation || {}
   const coordinates = `${latitude},${longitude}`
   const bounds = [
     Math.max(-180, longitude - 0.012),
@@ -56,66 +35,37 @@ export async function ContactsScreen() {
 
           <div className={styles.content}>
             <div>
-              <h2 className={styles.storeTitle}>Mokuren Tea</h2>
+              <h2 className={styles.storeTitle}>{settings?.name || 'Tea store'}</h2>
               <address className={styles.details}>
-                {address}
-                <br />
-                {hours}
-                <br />
-                <a href={`tel:${phone.replace(/[^+\d]/g, '')}`}>{phone}</a>
-                <br />
-                <a href={`mailto:${email}`}>{email}</a>
+                <StoreContacts settings={settings} />
               </address>
 
-              {!content && (
-                <dl className={styles.hours} aria-label="Opening hours">
-                  <dt>Mon–Fri</dt>
-                  <dd>10:00–20:00</dd>
-                  <dt>Saturday</dt>
-                  <dd>10:00–18:00</dd>
-                  <dt>Sunday</dt>
-                  <dd>11:00–17:00</dd>
-                </dl>
-              )}
-
-              {!content && (
-                <p className={styles.notice}>
-                  Reserve online and collect in store — no prepayment. We call to confirm before
-                  pickup. Demo data for concept purposes.
-                </p>
-              )}
-
               <div className={styles.actions}>
-                <Button href={directionsUrl} target="_blank" rel="noopener noreferrer">
-                  {configuredLocation ? 'Get Directions' : 'View Example Directions'}
-                </Button>
+                {configuredLocation && (
+                  <Button href={directionsUrl} target="_blank" rel="noopener noreferrer">
+                    Get Directions
+                  </Button>
+                )}
                 <Button href="/catalog" variant="ghost">
                   Browse Teas
                 </Button>
               </div>
             </div>
 
-            <div>
-              <div className={styles.map}>
-                <iframe
-                  className={styles.mapFrame}
-                  title={
-                    configuredLocation
-                      ? 'OpenStreetMap — store location'
-                      : 'OpenStreetMap — example location'
-                  }
-                  src={mapUrl}
-                  loading="lazy"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                />
+            {configuredLocation && (
+              <div>
+                <div className={styles.map}>
+                  <iframe
+                    className={styles.mapFrame}
+                    title="OpenStreetMap — store location"
+                    src={mapUrl}
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allowFullScreen
+                  />
+                </div>
               </div>
-              {!configuredLocation && (
-                <p className={styles.mapNote}>
-                  This is an example location. The store location has not been set yet.
-                </p>
-              )}
-            </div>
+            )}
           </div>
         </section>
       </Container>
