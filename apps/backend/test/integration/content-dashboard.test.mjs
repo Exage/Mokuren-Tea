@@ -79,7 +79,7 @@ test('CMS initialization is repeatable and draft versions reject stale saves', a
   assert.equal(stale.body.code, 'STALE_VERSION')
 })
 
-test('published contacts expose configured map coordinates, without exposing a draft', async () => {
+test('CMS publishes editorial contacts without duplicating Settings or exposing a draft', async () => {
   const route = '/api/admin/cms/blocks/contacts/contacts.content'
   const content = {
     title: 'Visit us',
@@ -90,16 +90,24 @@ test('published contacts expose configured map coordinates, without exposing a d
     location: { latitude: 53.9, longitude: 27.56 },
   }
   const draft = await request(app.getHttpServer()).patch(`${route}/draft`).set(headers()).send({
-    pageKey: 'contacts', blockKey: 'contacts.content', expectedDraftVersion: 0, content,
+    pageKey: 'contacts',
+    blockKey: 'contacts.content',
+    expectedDraftVersion: 0,
+    content,
   })
   assert.equal(draft.status, 200, JSON.stringify(draft.body))
   const before = await request(app.getHttpServer()).get('/api/public/cms/pages/contacts')
   assert.equal(before.body.blocks['contacts.content'].content, null)
-  await request(app.getHttpServer()).post(`${route}/publish`).set(headers()).send({
-    pageKey: 'contacts', blockKey: 'contacts.content',
-  }).expect(201)
+  await request(app.getHttpServer())
+    .post(`${route}/publish`)
+    .set(headers())
+    .send({
+      pageKey: 'contacts',
+      blockKey: 'contacts.content',
+    })
+    .expect(201)
   const published = await request(app.getHttpServer()).get('/api/public/cms/pages/contacts')
-  assert.deepEqual(published.body.blocks['contacts.content'].content.location, content.location)
+  assert.deepEqual(published.body.blocks['contacts.content'].content, { title: 'Visit us' })
 })
 
 test('CMS preview keeps other blocks published and restore changes only draft', async () => {
@@ -342,6 +350,64 @@ test('OpenAPI describes the actual CMS, audit and dashboard response shapes', ()
   assert.equal(dashboard.$ref, '#/components/schemas/DashboardViewDto')
   assert.ok(document.components.schemas.PublishedCmsBlockDto)
   assert.ok(document.paths['/api/admin/reservations'].post.responses['201'])
+})
+
+test('Settings API owns contacts and validated map coordinates, independently of CMS', async () => {
+  const route = '/api/admin/store-settings'
+  const input = {
+    name: 'Configured store',
+    address: 'Configured address',
+    hours: 'Weekdays',
+    hoursShort: 'Mon–Fri',
+    phone: '+123456',
+    contacts: { email: 'new@example.com' },
+    location: { latitude: 0, longitude: 0 },
+  }
+  await request(app.getHttpServer()).patch(route).send(input).expect(401)
+  const saved = await request(app.getHttpServer()).patch(route).set(headers()).send(input)
+  assert.equal(saved.status, 200, JSON.stringify(saved.body))
+  const published = await request(app.getHttpServer()).get('/api/public/store-settings').expect(200)
+  for (const key of Object.keys(input)) {
+    assert.deepEqual(published.body[key], input[key])
+  }
+  await request(app.getHttpServer())
+    .patch(route)
+    .set(headers())
+    .send({ hoursShort: 'Weekdays, from 10:00' })
+    .expect(200)
+  const updatedHours = await request(app.getHttpServer()).get('/api/public/store-settings')
+  assert.equal(updatedHours.body.hours, input.hours)
+  assert.equal(updatedHours.body.hoursShort, 'Weekdays, from 10:00')
+  await request(app.getHttpServer())
+    .patch(route)
+    .set(headers())
+    .send({ hoursShort: 'x'.repeat(201) })
+    .expect(400)
+  await request(app.getHttpServer())
+    .patch(route)
+    .set(headers())
+    .send({ hoursShort: null })
+    .expect(200)
+  const clearedHours = await request(app.getHttpServer()).get('/api/public/store-settings')
+  assert.equal(clearedHours.body.hoursShort, null)
+  assert.equal(clearedHours.body.hours, input.hours)
+  for (const location of [
+    { latitude: 20 },
+    { latitude: 86, longitude: 0 },
+    { latitude: 0, longitude: 181 },
+    { latitude: '53.9', longitude: 27.56 },
+  ]) {
+    await request(app.getHttpServer()).patch(route).set(headers()).send({ location }).expect(400)
+  }
+  await request(app.getHttpServer())
+    .patch(route)
+    .set(headers())
+    .send({ location: null, phone: null })
+    .expect(200)
+  const cleared = await request(app.getHttpServer()).get('/api/public/store-settings')
+  assert.equal(cleared.body.location, null)
+  assert.equal(cleared.body.phone, null)
+  assert.equal(cleared.body.address, input.address)
 })
 
 test('compiled initialization and index commands can be repeated without overwriting edits', async () => {

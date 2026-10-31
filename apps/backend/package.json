@@ -20,7 +20,9 @@
     "db:down": "docker compose down",
     "db:status": "docker compose ps",
     "admin:create": "node dist/auth/admin-create.cli.js",
+    "settings:migrate-content": "node dist/store-settings/settings-content-migration.cli.js",
     "content:initialize": "node dist/cms/content-initialize.cli.js",
+    "content:import-storefront": "node dist/cms/storefront-content-import.cli.js",
     "indexes:report": "node dist/database/indexes.cli.js report",
     "indexes:ensure": "node dist/database/indexes.cli.js ensure"
   },

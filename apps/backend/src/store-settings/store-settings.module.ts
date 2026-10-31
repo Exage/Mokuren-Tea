@@ -7,7 +7,10 @@ import { AdminStoreSettingsController } from './admin-store-settings.controller.
 import { StoreSettings, StoreSettingsSchema } from './schemas/store-settings.schema.js'
 
 @Module({
-  imports: [AuditModule, MongooseModule.forFeature([{ name: StoreSettings.name, schema: StoreSettingsSchema }])],
+  imports: [
+    AuditModule,
+    MongooseModule.forFeature([{ name: StoreSettings.name, schema: StoreSettingsSchema }]),
+  ],
   controllers: [PublicStoreSettingsController, AdminStoreSettingsController],
   providers: [StoreSettingsService],
   exports: [StoreSettingsService],

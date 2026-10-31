@@ -49,11 +49,11 @@ For MongoDB Atlas or another existing replica set, skip `db:up` and set
 | `CLOUDINARY_API_KEY`      | Required in production | Cloudinary API key (server-side only)                                                |
 | `CLOUDINARY_API_SECRET`   | Required in production | Cloudinary API secret (never exposed to clients or logs)                             |
 | `CLOUDINARY_ASSET_FOLDER` | Required in production | Existing Cloudinary folder (Dynamic folders `asset_folder`) where uploads are placed |
-| `SESSION_COOKIE_NAME`    | `admin_session`        | HttpOnly admin session cookie                                                        |
-| `CSRF_TOKEN_NAME`        | `csrf_token`           | Cookie echoed in `X-CSRF-Token` for cookie-authenticated mutations                   |
-| `CORS_ORIGINS`           | Empty                  | Comma-separated exact frontend origins                                              |
-| `RATE_LIMIT_MAX`         | `30`                   | Requests per route and IP in one fixed window                                        |
-| `RATE_LIMIT_WINDOW_MS`   | `60000`                | Rate limit window in milliseconds                                                    |
+| `SESSION_COOKIE_NAME`     | `admin_session`        | HttpOnly admin session cookie                                                        |
+| `CSRF_TOKEN_NAME`         | `csrf_token`           | Cookie echoed in `X-CSRF-Token` for cookie-authenticated mutations                   |
+| `CORS_ORIGINS`            | Empty                  | Comma-separated exact frontend origins                                               |
+| `RATE_LIMIT_MAX`          | `30`                   | Requests per route and IP in one fixed window                                        |
+| `RATE_LIMIT_WINDOW_MS`    | `60000`                | Rate limit window in milliseconds                                                    |
 
 The application loads `.env` from this directory, including when launched from a
 different working directory. Process environment variables take precedence.
@@ -62,6 +62,13 @@ name, API key, API secret, and asset folder are all required; in development
 and test they are optional so the API can boot without secrets (uploads then
 return `503`, tests inject a fake uploader). `.env` is ignored by Git.
 The Turbo development task forwards these variables when supplied by the shell.
+
+For local storefront requests, set
+`CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000` in `.env`, as in
+`.env.example`. An unset or empty value disables cross-origin access: the API
+can return `200` while the browser blocks the response. Origins must match the
+storefront's protocol, hostname, and port exactly. Restart the backend after
+changing `.env` so the new configuration takes effect.
 
 ## Commands
 
@@ -162,11 +169,20 @@ POST   /api/admin/media-assets        multipart file + optional name and alt -> 
 GET    /api/admin/media-assets        ?search=&status= (default ready), paginated
 GET    /api/admin/media-assets/:id
 PATCH  /api/admin/media-assets/:id    { name?, alt? }
+PUT    /api/admin/media-assets/:id/file   multipart file + optional name and alt -> 200 ready
 GET    /api/admin/media-assets/:id/usages   products referencing the image
 DELETE /api/admin/media-assets/:id    202, then GET polls deleting -> deleted
 ```
 
 New uploads are resized to 558 pixels wide by Cloudinary, preserving aspect ratio.
+
+File replacement accepts the same formats and size limit as upload. It preserves
+the media ID, usage count, and product/CMS references, including published content.
+Omitted name and alt fields keep their current values. The old ready image stays
+visible until the new file metadata is atomically saved with a new URL. Concurrent
+replacement or deletion returns `409`. Failed uploads preserve the old file.
+Pending replacements and retired binaries are tracked in MongoDB; media
+reconciliation releases stale replacement claims and retries binary cleanup.
 
 Rules: one file per request; JPEG, PNG, WebP verified by magic bytes
 (unsupported -> `415`); 10 MiB per-file limit (`413` when exceeded,
@@ -223,7 +239,6 @@ node dist/categories/categories-migration.cli.js backfill
 The backfill is idempotent: valid fields are never rewritten, and repeated runs
 are safe. Backfill timestamps are migration-time values, not known original
 creation dates.
-
 
 Service commands (run `build` first):
 
@@ -319,14 +334,14 @@ conditional updates. Each change creates an immutable movement in the same
 transaction. A manual adjustment sets the **target physical grams** and must
 not reduce them below the reserved amount. Manual operations require a reason.
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| GET | `/api/admin/inventory/:productId/stock` | Exact physical, reserved and available grams |
-| GET | `/api/admin/inventory/movements` | Paginated movement history; filter by product, type, reservation, correction or date |
-| POST | `/api/admin/inventory/receipt` | `{ productId, grams, reason }` |
-| POST | `/api/admin/inventory/write-off` | `{ productId, grams, reason }`, free stock only |
-| POST | `/api/admin/inventory/adjust` | `{ productId, targetPhysicalGrams, reason }` |
-| POST | `/api/admin/inventory/compensate` | `{ movementId, reason }` |
+| Method | Route                                   | Purpose                                                                              |
+| ------ | --------------------------------------- | ------------------------------------------------------------------------------------ |
+| GET    | `/api/admin/inventory/:productId/stock` | Exact physical, reserved and available grams                                         |
+| GET    | `/api/admin/inventory/movements`        | Paginated movement history; filter by product, type, reservation, correction or date |
+| POST   | `/api/admin/inventory/receipt`          | `{ productId, grams, reason }`                                                       |
+| POST   | `/api/admin/inventory/write-off`        | `{ productId, grams, reason }`, free stock only                                      |
+| POST   | `/api/admin/inventory/adjust`           | `{ productId, targetPhysicalGrams, reason }`                                         |
+| POST   | `/api/admin/inventory/compensate`       | `{ movementId, reason }`                                                             |
 
 Stock-mutating routes accept an optional `Idempotency-Key` header. A completed
 request with the same key and body replays its saved result; a changed body
@@ -351,17 +366,17 @@ enforce one global request budget.
 Admin routes require an active session; mutations also require CSRF protection
 for cookie sessions:
 
-| Method | Route | Purpose |
-| --- | --- | --- |
-| POST | `/api/admin/reservations` | Create a new request on behalf of a customer |
-| GET | `/api/admin/reservations` | Paginated list with status, source, customer and date filters |
-| GET | `/api/admin/reservations/:id` | Reservation and snapshots |
-| PATCH | `/api/admin/reservations/:id` | Edit a `new` request |
-| GET | `/api/admin/reservations/:id/events` | Event history |
-| POST | `/api/admin/reservations/:id/confirm` | Reserve snapshot grams |
-| POST | `/api/admin/reservations/:id/ready` | Mark ready without stock change |
-| POST | `/api/admin/reservations/:id/complete` | Decrease physical and reserved grams |
-| POST | `/api/admin/reservations/:id/cancel` | Release reserve; `ready` requires `{ teaReturned: true }` |
+| Method | Route                                  | Purpose                                                       |
+| ------ | -------------------------------------- | ------------------------------------------------------------- |
+| POST   | `/api/admin/reservations`              | Create a new request on behalf of a customer                  |
+| GET    | `/api/admin/reservations`              | Paginated list with status, source, customer and date filters |
+| GET    | `/api/admin/reservations/:id`          | Reservation and snapshots                                     |
+| PATCH  | `/api/admin/reservations/:id`          | Edit a `new` request                                          |
+| GET    | `/api/admin/reservations/:id/events`   | Event history                                                 |
+| POST   | `/api/admin/reservations/:id/confirm`  | Reserve snapshot grams                                        |
+| POST   | `/api/admin/reservations/:id/ready`    | Mark ready without stock change                               |
+| POST   | `/api/admin/reservations/:id/complete` | Decrease physical and reserved grams                          |
+| POST   | `/api/admin/reservations/:id/cancel`   | Release reserve; `ready` requires `{ teaReturned: true }`     |
 
 Allowed transitions are `new → confirmed → ready → completed`, plus cancellation
 from `new`, `confirmed`, or `ready`. Completed and cancelled requests are final.
@@ -460,3 +475,58 @@ when present) and `products` (published featured products in the configured
 order) on each block, alongside the existing `content` and `version`. Missing or
 unpublished references are omitted; draft content remains private. Product
 availability and prices reflect the public catalog at the time of the request.
+
+### Import the existing storefront into CMS
+
+With the client source files present, run:
+
+```sh
+pnpm --filter @mokuren/backend build
+pnpm --filter @mokuren/backend content:import-storefront
+# To publish the newly imported blocks immediately:
+pnpm --filter @mokuren/backend content:import-storefront --publish
+```
+
+This one-time migration snapshots the current storefront copy, uploads its three
+active editorial images through the media service with their source dimensions,
+and binds media IDs to CMS blocks. Existing product images are reused through
+four published featured teas (Japanese Sencha, Milk Oolong, Jasmine Green, Earl
+Grey). These products must already exist. It copies the current example contact
+details without turning the example map coordinates into a configured store
+location. Replace those contact details with real store information when ready.
+
+The importer skips every block that already has a draft or publication, including
+on repeated runs. The default command saves drafts; `--publish` publishes only
+blocks created during that invocation. It does not publish existing drafts. Ready
+media assets from interrupted imports are reused by their import name and source
+filename. The importer preserves usage tracking and audit events through the
+existing services.
+
+### Store settings and legacy website content
+
+Store identity, phone, address, opening hours, contact links, and optional
+`location: { latitude, longitude }` belong to `/api/admin/store-settings` and
+are exposed through `/api/public/store-settings`. A partial Settings PATCH
+preserves omitted fields; `location: null` removes the map. Latitude is limited
+to -85.0511…85.0511 and longitude to -180…180. Website Content now owns only
+editorial fields; contact fields in old CMS payloads are discarded on validation
+so existing drafts and historical publications remain usable.
+
+After building, migrate an existing installation before deploying the new
+storefront:
+
+```sh
+pnpm --filter @mokuren/backend settings:migrate-content
+```
+
+The repeatable migration fills only missing Settings fields using **published**
+Contacts, falling back to the published home visit block for address and hours.
+Existing Settings values always win. It reports conflicts for review, never
+uses private drafts, and preserves CMS history. New storefront imports contain
+only editorial content; configure store details in Settings.
+
+Opening hours has two Settings variants: `hours` is the full schedule for
+Contacts (line breaks are preserved), and optional `hoursShort` is the compact
+schedule for the footer and home visit section. When `hoursShort` is empty,
+those compact placements continue using `hours`. The content migration can
+fill an absent `hoursShort` from the legacy published home visit schedule.

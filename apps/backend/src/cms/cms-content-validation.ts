@@ -73,8 +73,6 @@ export const visitStoreContentSchema = z
     title: nonEmptyString.max(200),
     subtitle: nonEmptyString.max(500).optional(),
     imageId: objectIdString.optional(),
-    address: nonEmptyString.max(500),
-    hours: nonEmptyString.max(500),
   })
   .strict()
 
@@ -100,17 +98,6 @@ export const aboutContentSchema = z
 export const contactsContentSchema = z
   .object({
     title: nonEmptyString.max(200),
-    address: nonEmptyString.max(500),
-    phone: nonEmptyString.max(100),
-    email: z.string().email().max(200),
-    hours: nonEmptyString.max(500),
-    location: z
-      .object({
-        latitude: z.number().min(-85.0511).max(85.0511),
-        longitude: z.number().min(-180).max(180),
-      })
-      .strict()
-      .optional(),
   })
   .strict()
 
@@ -137,7 +124,20 @@ export function validateBlockContent(
     }
   }
 
-  const result = schema.safeParse(content)
+  let editorialContent = content
+  if (
+    ['home.visitStore', 'contacts.content'].includes(blockKey) &&
+    content &&
+    typeof content === 'object' &&
+    !Array.isArray(content)
+  ) {
+    const cleaned = { ...content } as Record<string, unknown>
+    for (const key of ['address', 'hours', 'phone', 'email', 'location']) {
+      delete cleaned[key]
+    }
+    editorialContent = cleaned
+  }
+  const result = schema.safeParse(editorialContent)
 
   if (!result.success) {
     return {

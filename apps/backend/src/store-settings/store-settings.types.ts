@@ -4,6 +4,8 @@ export interface StoreSettingsView {
   tagline: string | null
   address: string | null
   hours: string | null
+  hoursShort: string | null
+  location: { latitude: number; longitude: number } | null
   phone: string | null
   contacts: Record<string, unknown> | null
   updatedAt: string
@@ -14,6 +16,8 @@ export interface UpdateStoreSettingsInput {
   tagline?: string | null
   address?: string | null
   hours?: string | null
+  hoursShort?: string | null
+  location?: { latitude: number; longitude: number } | null
   phone?: string | null
   contacts?: Record<string, unknown> | null
 }

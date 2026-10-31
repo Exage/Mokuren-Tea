@@ -1,11 +1,5 @@
 import type { AdminRequestUser } from '../auth/auth.types.js'
-import {
-  Body,
-  Controller,
-  Get,
-  Patch,
-  UseGuards,
-} from '@nestjs/common'
+import { Body, Controller, Get, Patch, UseGuards } from '@nestjs/common'
 import { ApiBearerAuth, ApiCookieAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger'
 import { AdminAuthGuard } from '../auth/admin-auth.guard.js'
 import { CsrfGuard } from '../auth/csrf.guard.js'
@@ -45,8 +39,10 @@ export class AdminStoreSettingsController {
         tagline: dto.tagline,
         address: dto.address,
         hours: dto.hours,
+        hoursShort: dto.hoursShort,
         phone: dto.phone,
         contacts: dto.contacts,
+        location: dto.location,
       },
       admin?.adminId ?? null
     )

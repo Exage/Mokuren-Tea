@@ -111,11 +111,45 @@ export class StoreSettingsService {
         }
       }
 
+      if (input.hoursShort !== undefined) {
+        const hoursShort =
+          input.hoursShort === null ? null : requireNonEmptyString(input.hoursShort, 'hoursShort')
+        if (hoursShort !== (doc.hoursShort || null)) {
+          doc.hoursShort = hoursShort
+          changes.hoursShort = hoursShort
+        }
+      }
+
       if (input.phone !== undefined) {
         const phone = input.phone === null ? null : requireNonEmptyString(input.phone, 'phone')
         if (phone !== doc.phone) {
           doc.phone = phone
           changes.phone = phone
+        }
+      }
+
+      if (input.location !== undefined) {
+        const location = input.location
+        if (
+          location !== null &&
+          (typeof location.latitude !== 'number' ||
+            !Number.isFinite(location.latitude) ||
+            Math.abs(location.latitude) > 85.0511 ||
+            typeof location.longitude !== 'number' ||
+            !Number.isFinite(location.longitude) ||
+            Math.abs(location.longitude) > 180)
+        ) {
+          throw new BadRequestException({
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid map coordinates',
+          })
+        }
+        const next = location
+          ? { latitude: location.latitude, longitude: location.longitude }
+          : null
+        if (JSON.stringify(next) !== JSON.stringify(doc.location || null)) {
+          doc.location = next
+          changes.location = next
         }
       }
 
@@ -152,6 +186,7 @@ export class StoreSettingsService {
       tagline?: string | null
       address?: string | null
       hours?: string | null
+      hoursShort?: string | null
       phone?: string | null
       contacts?: Record<string, unknown> | null
     },
@@ -174,6 +209,7 @@ export class StoreSettingsService {
               tagline: defaults.tagline ?? null,
               address: defaults.address ?? null,
               hours: defaults.hours ?? null,
+              hoursShort: defaults.hoursShort ?? null,
               phone: defaults.phone ?? null,
               contacts: defaults.contacts ?? null,
             },
@@ -217,8 +253,10 @@ export class StoreSettingsService {
       tagline: doc.tagline,
       address: doc.address,
       hours: doc.hours,
+      hoursShort: doc.hoursShort || null,
       phone: doc.phone,
       contacts: doc.contacts,
+      location: doc.location || null,
       updatedAt: doc.updatedAt.toISOString(),
     }
   }

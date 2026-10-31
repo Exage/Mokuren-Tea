@@ -30,8 +30,14 @@ export class StoreSettings {
   @Prop({ type: String, required: false, default: null, trim: true, maxlength: 500 })
   hours!: string | null
 
+  @Prop({ type: String, required: false, default: null, trim: true, maxlength: 200 })
+  hoursShort!: string | null
+
   @Prop({ type: String, required: false, default: null, trim: true, maxlength: 100 })
   phone!: string | null
+
+  @Prop({ type: Object, required: false, default: null })
+  location!: { latitude: number; longitude: number } | null
 
   @Prop({ type: Object, required: false, default: null })
   contacts!: Record<string, unknown> | null
