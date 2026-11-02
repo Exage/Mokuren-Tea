@@ -28,6 +28,6 @@ export function corsOptions(config: ConfigService) {
     origin: parseCorsOrigins(config.get('CORS_ORIGINS')),
     credentials: true,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Session', 'X-CSRF-Token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Session', 'X-CSRF-Token', 'Idempotency-Key'],
   }
 }

@@ -1,0 +1,11 @@
+version: 1
+name: storefront-reservations
+slug: storefront-reservations
+protocol: http
+origin: localhost
+port: 4500
+interceptRequests: true
+scenarios:
+  - name: default
+    path: ./default.js
+    default: true

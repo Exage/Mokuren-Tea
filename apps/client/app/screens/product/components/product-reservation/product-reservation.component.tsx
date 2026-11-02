@@ -15,6 +15,7 @@ export function ProductReservation({ product }: { product: PublicProduct }) {
     increaseQuantity,
     price,
     variant,
+    hasHydrated,
     addToBag,
     message,
   } = useProductReservationHook(product)
@@ -74,7 +75,12 @@ export function ProductReservation({ product }: { product: PublicProduct }) {
             +
           </button>
         </div>
-        <Button className={styles.add} type="button" disabled={!variant} onClick={addToBag}>
+        <Button
+          className={styles.add}
+          type="button"
+          disabled={!variant || !hasHydrated}
+          onClick={addToBag}
+        >
           Add to Reservation
         </Button>
       </div>

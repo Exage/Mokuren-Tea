@@ -3,8 +3,14 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { useWindowSizeHook } from '@/app/shared/hooks'
+import { useBagStore, useBagHydrationHook, useBagStorageSyncHook } from '@/app/shared/stores/bag'
 
 export function useHeaderHook() {
+  const hasHydrated = useBagHydrationHook()
+  useBagStorageSyncHook()
+  const storedBagCount = useBagStore((state) =>
+    state.items.reduce((total, item) => total + item.quantity, 0)
+  )
   const pathname = usePathname()
   const { width } = useWindowSizeHook()
   const isDesktop = Boolean(width && width > 1024)
@@ -88,6 +94,7 @@ export function useHeaderHook() {
   }, [isMenuOpen])
 
   return {
+    bagCount: hasHydrated ? storedBagCount : null,
     pathname,
     mobilePanelId,
     headerRef,

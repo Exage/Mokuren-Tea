@@ -170,11 +170,43 @@ sizes independent of the existing semantic heading elements.
 | Reused constants                        | `app/shared/constants/`                 |
 | Reused domain interfaces                | `app/shared/interface/`                 |
 | Reused browser-safe utilities           | `app/shared/utils/`                     |
+| Shared client state                     | `app/shared/stores/<domain>/`           |
 | Backend request functions               | `app/shared/api/requests/`              |
 | Frontend API request and response types | `app/shared/api/types/`                 |
 
 Create optional directories when real code needs them. Keep business-specific logic
 close to its screen until multiple consumers justify sharing it.
+
+## Reservation bag
+
+`app/shared/stores/bag/` owns the Zustand bag used by the product screen, header,
+and `/bag`. Zustand persist saves only product IDs, variant IDs, packaging weights,
+and quantities under `mokuren-bag`. Names, images, prices, availability, customer
+details, and API request state are not persisted. The bag allows 20 distinct
+product/variant lines and 1–9 packs per line.
+
+Hydration runs after mounting; server and initial client renders show a loading
+state instead of an empty bag. The header also listens for storage events to
+synchronize changes from other tabs. Stored input is validated before use.
+Legacy `{ id, weight, qty }` arrays are supported: those lines use weight-based
+keys until the same real variant is added again. Only legacy lines resolve their
+variant by weight; removed modern variants remain unavailable.
+
+The bag uses TanStack Query and `GET /products/by-ids?ids=<comma-separated IDs>`
+to load current product data on mount and window focus. Missing products and
+unavailable variants stay visible and removable, but do not contribute to the
+estimated total. A failed request preserves selections and offers a retry.
+Catalog and bag reuse the shared `QueryProvider` component, each with its own
+screen-scoped query client. The bag submits to `POST /public/reservations` with
+an `Idempotency-Key`, real variant IDs (including resolved legacy selections),
+and the customer's name and phone number. Unavailable lines block submission.
+Duplicate clicks are ignored. A timeout, network error, or uncertain server
+response keeps the original payload and key for retry while locking edits on
+this page; these temporary details are held in memory only. Definite validation
+and availability errors allow edits. Successful requests show the reservation
+number and server total, then remove only submitted quantities from the bag,
+preserving additions from other tabs. Customer details are never persisted.
+The API's CORS policy must allow `Idempotency-Key` for cross-origin submissions.
 
 Use the shared `Select` component for single-value dropdowns. Pass `value`,
 `options`, and `onValueChange`, and provide an accessible label. It owns the

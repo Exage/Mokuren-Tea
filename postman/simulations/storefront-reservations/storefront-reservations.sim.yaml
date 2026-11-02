@@ -1,0 +1,8 @@
+simulation: storefront-reservations
+routing: path
+mocks:
+  - name: storefront-reservations
+    routeKey: api
+    origin:
+      - localhost
+    path: postman/mocks/storefront-reservations/config.yaml

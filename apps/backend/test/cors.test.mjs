@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { parseCorsOrigins } from '../dist/config/cors.js'
+import { parseCorsOrigins, corsOptions } from '../dist/config/cors.js'
 
 test('CORS defaults to no cross-origin access and accepts an exact origin list', () => {
   assert.deepEqual(parseCorsOrigins(undefined), [])
@@ -15,4 +15,13 @@ test('CORS rejects wildcard, opaque, path-bearing, and credential-bearing origin
   for (const value of ['*', 'https://*.example.com', 'null', 'file:///tmp', 'https://example.com/path', 'https://u:p@example.com', 'https://example.com,', 42]) {
     assert.throws(() => parseCorsOrigins(value), /CORS_ORIGINS/)
   }
+})
+
+
+test('storefront preflights allow idempotent reservation submissions only from configured origins', () => {
+  const options = corsOptions({ get: () => 'http://localhost:3000' })
+  assert.deepEqual(options.origin, ['http://localhost:3000'])
+  assert.ok(options.methods.includes('POST'))
+  assert.ok(options.allowedHeaders.includes('Content-Type'))
+  assert.ok(options.allowedHeaders.includes('Idempotency-Key'))
 })

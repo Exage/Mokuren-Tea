@@ -7,7 +7,7 @@ import { Description } from '@/app/shared/components/description'
 import { Eyebrow } from '@/app/shared/components/eyebrow'
 import { Title } from '@/app/shared/components/title'
 import { CatalogResults } from './components/catalog-results'
-import { CatalogQueryProvider } from './components/catalog-results/catalog-query-provider'
+import { QueryProvider } from '@/app/shared/components/query-provider'
 import styles from './catalog.module.css'
 
 export async function CatalogScreen() {
@@ -38,9 +38,9 @@ export async function CatalogScreen() {
             />
           </div>
         )}
-        <CatalogQueryProvider>
+        <QueryProvider>
           <CatalogResults initial={catalog} />
-        </CatalogQueryProvider>
+        </QueryProvider>
       </Container>
     </main>
   )

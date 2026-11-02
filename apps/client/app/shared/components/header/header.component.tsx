@@ -10,11 +10,11 @@ import styles from './header.module.css'
 
 export type HeaderProps = ComponentPropsWithoutRef<'header'> & {
   name: string
-  bagCount?: number
 }
 
-export function Header({ className, name, bagCount = 0, ...props }: HeaderProps) {
+export function Header({ className, name, ...props }: HeaderProps) {
   const {
+    bagCount,
     pathname,
     mobilePanelId,
     headerRef,
@@ -66,7 +66,10 @@ export function Header({ className, name, bagCount = 0, ...props }: HeaderProps)
               >
                 {isBag ? (
                   <>
-                    Bag <span className={styles.bagCount}>{bagCount}</span>
+                    Bag{' '}
+                    <span className={styles.bagCount} aria-live="polite">
+                      {bagCount ?? '…'}
+                    </span>
                   </>
                 ) : (
                   link.label
@@ -84,7 +87,10 @@ export function Header({ className, name, bagCount = 0, ...props }: HeaderProps)
               aria-label={bagLink.label}
               onClick={closeMenu}
             >
-              Bag <span className={styles.bagCount}>{bagCount}</span>
+              Bag{' '}
+              <span className={styles.bagCount} aria-live="polite">
+                {bagCount ?? '…'}
+              </span>
             </Link>
           )}
           <button

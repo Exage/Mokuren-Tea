@@ -11,6 +11,7 @@
     "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@mokuren/ui": "workspace:*",
     "@tanstack/react-query": "^5.104.5",
     "clsx": "^2.1.1",
     "embla-carousel-autoplay": "8.6.0",
@@ -19,7 +20,7 @@
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "@mokuren/ui": "workspace:*"
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@types/node": "^20",

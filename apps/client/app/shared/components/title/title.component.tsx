@@ -1,10 +1,10 @@
-import type { ComponentPropsWithoutRef } from 'react'
+import type { ComponentPropsWithRef } from 'react'
 import clsx from 'clsx'
 import styles from './title.module.css'
 
 type TitleSize = '3xl' | '2xl' | 'xl' | 'lg' | 'md'
 
-type TitleProps = ComponentPropsWithoutRef<'h1'> & {
+type TitleProps = ComponentPropsWithRef<'h1'> & {
   size: TitleSize
 }
 

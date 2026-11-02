@@ -199,3 +199,40 @@ test('hides drafts and archived products from the public card', async () => {
   await request(app.getHttpServer()).get('/api/products/hidden-draft').expect(404)
   await request(app.getHttpServer()).get('/api/products/old-tea').expect(404)
 })
+
+test('batch lookup returns only requested published products in request order', async () => {
+  const catalog = await request(app.getHttpServer()).get('/api/products').expect(200)
+  const [first, second] = catalog.body.items
+  const hidden = await db.collection('products').findOne({ slug: 'hidden-draft' })
+  const archived = await db.collection('products').findOne({ slug: 'old-tea' })
+  const missing = String(new Types.ObjectId())
+  const ids = [
+    second.id.toUpperCase(),
+    String(hidden._id),
+    missing,
+    first.id,
+    String(archived._id),
+    second.id,
+  ]
+  const response = await request(app.getHttpServer())
+    .get(`/api/products/by-ids?ids=${ids.join(',')}`)
+    .expect(200)
+  assert.deepEqual(
+    response.body.map((product) => product.id),
+    [second.id, first.id]
+  )
+  assert.equal(response.body[0].variants[0].variantId, second.variants[0].variantId)
+  for (const field of ['physicalGrams', 'reservedGrams', 'availableGrams']) {
+    assert.ok(!JSON.stringify(response.body).includes(field))
+  }
+})
+
+test('batch lookup validates missing, malformed, and oversized ID lists', async () => {
+  await request(app.getHttpServer()).get('/api/products/by-ids').expect(400)
+  await request(app.getHttpServer()).get('/api/products/by-ids?ids=').expect(400)
+  await request(app.getHttpServer()).get('/api/products/by-ids?ids=not-an-id').expect(400)
+  const ids = Array.from({ length: 101 }, () => String(new Types.ObjectId()))
+  await request(app.getHttpServer())
+    .get(`/api/products/by-ids?ids=${ids.join(',')}`)
+    .expect(400)
+})

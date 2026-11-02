@@ -74,3 +74,27 @@ revalidation interval. TanStack Query manages filtered and paginated requests in
 the browser with a five-minute freshness window. The two caches are independent,
 so changes can take longer than five minutes to become visible. Availability is
 informational; the backend must verify stock when a reservation is submitted.
+
+## Pickup reservations
+
+The bag sends the customer's name, phone number, and selected variants to
+`POST /public/reservations`. A successful request displays its number and the
+server-calculated total. It starts in `new` status; staff must confirm it before
+stock is reserved. There is no online payment.
+
+The form blocks unavailable items and duplicate submissions. An uncertain response
+keeps the same request and idempotency key for retry while this page remains open.
+Contact details are held in memory and are never saved in browser storage.
+
+Run the isolated HTTP simulation without creating real shop reservations:
+
+```sh
+postman simulation run postman/simulations/storefront-reservations/storefront-reservations.sim.yaml --port 4515 --no-history
+# In a second terminal, from the monorepo root:
+RESERVATION_SIMULATION_URL=http://localhost:4515/api node --test apps/client/test/reservation-simulation.test.mjs
+```
+
+The mock models the local backend contract and selected failure cases. It does not
+replace browser checks or the backend's integration tests. Normal `pnpm --filter
+client test` runs the unit tests and skips these two HTTP checks unless their
+simulation URL is set.

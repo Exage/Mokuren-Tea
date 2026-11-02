@@ -1,0 +1,23 @@
+purpose:
+  stands_in_for: The local public reservation API, using its controller, DTO, and service as the contract. No external owner mock was needed for this in-repository API.
+  unblocks: Real HTTP verification of storefront serialization, errors, and retries without creating customer reservations.
+assumptions:
+  - id: caller-preserves-uncertain-request
+    status: supported
+    claim: Within one mounted form, the caller retries an uncertain write with its original payload and idempotency key.
+    reason: Unit tests cover double clicks, payload edits, and throttling after network loss. Real HTTP tests cover receipt replay after a simulated committed write with a lost response.
+    verification: On 2026-11-02, 17 client unit tests passed. Two HTTP simulation tests passed; the log showed 201, 409, 429, invalid 201, 503, then replayed 201. The mock records the write before returning 503. A follow-up run on the same day passed 18 client unit tests and both HTTP simulation tests, with the same request outcomes in the simulation log. Browser checks also confirmed that the live button is enabled and invalid phone input is rejected before submission. Successful browser submission and recovery after navigation/reload were not exercised; no customer reservations were created in the shop database.
+    source: apps/client/test/reservation-submission.test.mjs; apps/client/test/reservation-simulation.test.mjs; postman/mocks/storefront-reservations/default.js; apps/client/app/shared/api/requests/reservations.ts
+    updated_at: '2026-11-02'
+  - id: backend-deduplicates-reservations
+    status: supported
+    claim: The local backend replays one reservation for the same idempotency key and payload, and rejects changed content or concurrent duplicate creation.
+    reason: Existing backend integration tests exercise the real controller and service with an isolated temporary MongoDB replica set.
+    verification: On 2026-11-02, all 24 targeted reservation and public rate-limit integration tests passed, including replay, changed payload, concurrent duplicate requests, stock rejection, and the full fulfillment flow. No customer reservations were created in the shop database.
+    source: apps/backend/test/integration/reservations.test.mjs; apps/backend/test/integration/public-reservations-rate.test.mjs; apps/backend/src/idempotency/idempotency.service.ts
+    updated_at: '2026-11-02'
+fingerprints:
+  - id: implementation
+    date: '2026-11-02'
+    commit: a0b62edaf9b3ae81449ceddf6663d38fb922da4b (dirty working tree)
+    cli: 1.75.0

@@ -1,8 +1,10 @@
 import { useEffect, useId, useState } from 'react'
 import type { PublicProduct } from '@/app/shared/api/types/cms'
-import { addToReservation } from '@/app/shared/utils/reservation-bag'
+import { useBagStore, useBagHydrationHook, MAX_BAG_LINES } from '@/app/shared/stores/bag'
 
 export function useProductReservationHook(product: PublicProduct) {
+  const hasHydrated = useBagHydrationHook()
+  const addItem = useBagStore((state) => state.addItem)
   const id = useId()
   const [weight, setWeight] = useState(
     product.variants.find((variant) => variant.available)?.weightGrams || 0
@@ -13,18 +15,26 @@ export function useProductReservationHook(product: PublicProduct) {
   const price = variant?.price.toFixed(2) || ''
 
   const addToBag = () => {
-    if (!variant) {
+    if (!variant || !hasHydrated) {
       return
     }
     try {
-      const addedQuantity = addToReservation(product.id, weight, quantity)
-      const message = addedQuantity
-        ? `${product.name} (${weight} g × ${addedQuantity}) added to your reservation.`
-        : 'Your reservation already contains the maximum of 9 packs for this size.'
+      const addedQuantity = addItem({
+        productId: product.id,
+        variantId: variant.variantId,
+        weightGrams: variant.weightGrams,
+        quantity,
+      })
+      const message =
+        addedQuantity === 'line-limit'
+          ? `Your bag can contain up to ${MAX_BAG_LINES} different teas and sizes.`
+          : addedQuantity
+            ? `${product.name} (${weight} g × ${addedQuantity}) added to your reservation.`
+            : 'Your reservation already contains the maximum of 9 packs for this size.'
       setFeedback((previous) => ({ message, revision: previous.revision + 1 }))
     } catch {
       setFeedback((previous) => ({
-        message: 'Your reservation could not be saved. Please try again.',
+        message: 'Your bag was updated, but could not be saved on this device. Please try again.',
         revision: previous.revision + 1,
       }))
     }
@@ -51,6 +61,7 @@ export function useProductReservationHook(product: PublicProduct) {
     increaseQuantity: () => setQuantity((previous) => Math.min(9, previous + 1)),
     price,
     variant,
+    hasHydrated,
     addToBag,
     message: feedback.message,
   }
