@@ -92,5 +92,14 @@ export function useCatalogMutationHook() {
       setBusy(false)
     }
   }
-  return { busy, error, notice, run }
+  return {
+    busy,
+    error,
+    notice,
+    run,
+    clearFeedback: () => {
+      setError('')
+      setNotice('')
+    },
+  }
 }

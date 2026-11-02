@@ -19,3 +19,19 @@
 .empty a {
   margin-top: 0.8rem;
 }
+
+.list {
+  list-style: none;
+  padding: 0 2.4rem 2.4rem;
+}
+.list a {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1.6rem 0;
+  border-bottom: 1px solid var(--color-border);
+  overflow-wrap: anywhere;
+}
+.list span {
+  color: var(--color-text-muted);
+  font-size: 1.3rem;
+}

@@ -1,19 +1,19 @@
 import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import { AuditWorkspace } from './components/audit-workspace'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
 export async function AuditScreen() {
   await requireAdminSession()
 
   return (
-    <SectionPreview
-      eyebrow="Administration"
-      title="Audit log"
-      description="A clear history of changes to your store."
-      features={[
-        'View administrative actions',
-        'Filter by administrator, action, and resource',
-        'Browse a read-only, paginated history',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Administration"
+        title="Audit log"
+        description="A read-only history of administrative actions, with the latest events first."
+      />
+      <AuditWorkspace />
+    </div>
   )
 }

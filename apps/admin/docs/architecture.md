@@ -21,10 +21,10 @@ tokens; headings use weight 600 and navigation uses weights 500 and 600.
 `HomeScreen` composes the overview layout. Its metrics, reservation summary, and
 quick actions live under `screens/home/components/`, with their own CSS Modules
 and named exports. The two overview panels share a screen-local `OverviewPanel`
-for their section and heading styles. Static components do not need hooks.
-Products, media, inventory, and website content compose interactive workspaces under their screen
-folders. Categories and taste notes share a dictionary editor. The other screens
-compose `SectionPreview`, which owns its CSS. Put screen-specific components
+for their section and heading styles. Static components do not need hooks. The interactive overview workspace loads
+the dashboard and owns its refresh state.
+Products, media, inventory, administrators, audit history, and website content compose interactive workspaces under their screen
+folders. Categories and taste notes share a dictionary editor. Reservations and settings also use dedicated interactive workspaces. Put screen-specific components
 under `screens/<name>/components/`. Do not add empty CSS, hooks, or API directories.
 
 `packages/ui` is the cross-application boundary for reusable controls.
@@ -92,8 +92,31 @@ legacy revisions remain publishable without restoring those fields. The
 Settings form accepts both coordinates together, including zero, and clearing
 both removes the storefront map. Changes appear after storefront cache refresh.
 
+Administrators uses `administrators.ts` for paginated search, account creation,
+display-name edits, access changes, password resets, and session revocation.
+Access changes, resets, and revocations require confirmation in the UI. The
+current administrator uses Change my password rather than resetting their own
+account, and cannot disable their own access. Generated temporary passwords stay
+in component state and are shown only until the result dialog closes.
+
+Audit history uses `audit.ts` with exact actor, action, resource type, and resource
+ID filters, plus inclusive date bounds converted from local time to ISO strings.
+Pagination and refresh preserve applied filters. Event details show changes and
+metadata as read-only JSON. Both workspaces use the authenticated CSRF transport;
+the backend remains responsible for authorization and audit recording.
+
 Opening hours has two Settings variants: `hours` is the full schedule for
 Contacts (line breaks are preserved), and optional `hoursShort` is the compact
 schedule for the footer and home visit section. When `hoursShort` is empty,
 those compact placements continue using `hours`. The content migration can
 fill an absent `hoursShort` from the legacy published home visit schedule.
+
+Reservations uses `reservations.ts` for paginated filters, details, event history,
+creation, editing new requests, and confirmed status transitions. Creation and
+editing send item identifiers and quantities only; backend snapshots and totals
+are authoritative. The published product picker supports search and pagination.
+Ready reservations require explicit tea-return confirmation before cancellation.
+Mutations are locked during submission and never retried after uncertain results.
+Overview reads `dashboard.ts`, showing server aggregates, recent active requests,
+and stock issues, with refresh and explicit loading/error/empty states. Reservation
+metrics link to status filters, and recent requests link directly to their details.

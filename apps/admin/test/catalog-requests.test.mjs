@@ -12,6 +12,10 @@ let products
 let media
 let inventory
 let cms
+let administrators
+let audit
+let reservations
+let dashboard
 let calls
 let replies
 let redirects
@@ -22,7 +26,18 @@ const originalCookieName = process.env.NEXT_PUBLIC_CSRF_TOKEN_NAME
 
 before(async () => {
   directory = await mkdtemp(join(tmpdir(), 'mokuren-catalog-test-'))
-  for (const name of ['admin-auth', 'catalog-request', 'products', 'media', 'inventory', 'cms']) {
+  for (const name of [
+    'admin-auth',
+    'catalog-request',
+    'products',
+    'media',
+    'inventory',
+    'cms',
+    'administrators',
+    'audit',
+    'reservations',
+    'dashboard',
+  ]) {
     const source = await readFile(
       new URL(`../app/shared/api/requests/${name}.ts`, import.meta.url),
       'utf8'
@@ -39,6 +54,10 @@ before(async () => {
   media = await import(pathToFileURL(join(directory, 'media.mjs')))
   inventory = await import(pathToFileURL(join(directory, 'inventory.mjs')))
   cms = await import(pathToFileURL(join(directory, 'cms.mjs')))
+  administrators = await import(pathToFileURL(join(directory, 'administrators.mjs')))
+  audit = await import(pathToFileURL(join(directory, 'audit.mjs')))
+  reservations = await import(pathToFileURL(join(directory, 'reservations.mjs')))
+  dashboard = await import(pathToFileURL(join(directory, 'dashboard.mjs')))
 })
 
 beforeEach(() => {
@@ -251,4 +270,141 @@ test('CMS publication is not retried after an uncertain response', async () => {
   replies.push({ error: new TypeError('Connection lost') })
   await assert.rejects(cms.publishCmsBlock({ pageKey: 'home', blockKey: 'home.hero' }))
   assert.equal(calls.length, 1)
+})
+
+test('administrator changes use CSRF and preserve explicit access deactivation', async () => {
+  replies.push(
+    { body: { user: { id: 'new-admin' }, temporaryPassword: 'issued-once' } },
+    { body: { id: 'new-admin', isActive: false } },
+    { body: { revokedCount: 2 } }
+  )
+  const created = await administrators.createAdministrator({
+    login: 'tea-admin',
+    displayName: 'Tea Admin',
+  })
+  assert.equal(created.temporaryPassword, 'issued-once')
+  await administrators.updateAdministrator('new-admin', { isActive: false })
+  await administrators.revokeAdministratorSessions('new-admin')
+  assert.deepEqual(
+    calls.map((call) => [call.url, call.method]),
+    [
+      ['/api/admin/users', 'POST'],
+      ['/api/admin/users/new-admin', 'PATCH'],
+      ['/api/admin/users/new-admin/revoke-sessions', 'POST'],
+    ]
+  )
+  assert.deepEqual(JSON.parse(calls[1].body), { isActive: false })
+  for (const call of calls) {
+    assert.equal(call.headers.get('X-CSRF-Token'), 'old-token')
+    assert.equal(call.credentials, 'include')
+    assert.equal(call.cache, 'no-store')
+  }
+})
+
+test('password resets never repeat after an uncertain result or a rate-limit response', async () => {
+  replies.push({ error: new TypeError('Connection lost') })
+  await assert.rejects(administrators.resetAdministratorPassword('admin-id'), /Connection lost/)
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].url, '/api/admin/users/admin-id/reset-password')
+  replies.push({ status: 429, body: { code: 'RATE_LIMITED', message: 'Try again later' } })
+  await assert.rejects(administrators.resetAdministratorPassword('admin-id'), /Try again later/)
+  assert.equal(calls.length, 2)
+})
+
+test('administration lists encode filters, retain date bounds and support cancellation', async () => {
+  const controller = new AbortController()
+  replies.push({ body: { items: [] } }, { body: { items: [] } })
+  await administrators.listAdministrators({ page: 3, search: 'tea & admin' }, controller.signal)
+  const usersQuery = new URL(calls[0].url, 'http://localhost').searchParams
+  assert.equal(usersQuery.get('page'), '3')
+  assert.equal(usersQuery.get('search'), 'tea & admin')
+  const filters = {
+    actorId: 'actor-id',
+    action: 'admin-user.updated',
+    entityType: 'admin-user',
+    entityId: 'resource & id',
+    from: '2026-10-01T00:00:00.000Z',
+    to: '2026-10-31T23:59:59.000Z',
+  }
+  await audit.listAuditEntries({ ...filters, page: 2 }, controller.signal)
+  const auditQuery = new URL(calls[1].url, 'http://localhost').searchParams
+  for (const [key, value] of Object.entries(filters)) {
+    assert.equal(auditQuery.get(key), value)
+  }
+  assert.equal(auditQuery.get('page'), '2')
+  controller.abort()
+  for (const call of calls) {
+    assert.equal(call.signal.aborted, true)
+    assert.equal(call.cache, 'no-store')
+  }
+})
+
+test('reservation filters and overview use authenticated cancellable reads', async () => {
+  const controller = new AbortController()
+  replies.push({ body: { items: [] } }, { body: { reservations: { new: 3 } } })
+  const filters = {
+    status: 'ready',
+    source: 'website',
+    customerName: 'Tea & Anna',
+    customerPhone: '+37529',
+    from: '2026-10-01T00:00:00.000Z',
+    to: '2026-10-31T23:59:59.000Z',
+  }
+  await reservations.listReservations({ ...filters, page: 2 }, controller.signal)
+  const params = new URL(calls[0].url, 'http://localhost').searchParams
+  for (const [key, value] of Object.entries(filters)) {
+    assert.equal(params.get(key), value)
+  }
+  assert.equal(params.get('page'), '2')
+  const result = await dashboard.getDashboard(controller.signal)
+  assert.equal(result.reservations.new, 3)
+  assert.equal(calls[1].url, '/api/admin/dashboard')
+  controller.abort()
+  for (const call of calls) {
+    assert.equal(call.signal.aborted, true)
+    assert.equal(call.cache, 'no-store')
+    assert.equal(call.credentials, 'include')
+  }
+})
+
+test('reservation edits send customer and item inputs and cancellation preserves return confirmation', async () => {
+  const input = {
+    customerName: 'Anna',
+    customerPhone: '+375291234567',
+    lines: [{ productId: 'tea', variantId: '50g', quantity: 2 }],
+  }
+  replies.push(
+    { body: { id: 'reservation' } },
+    { body: { id: 'reservation' } },
+    { body: { status: 'cancelled' } }
+  )
+  await reservations.createReservation(input)
+  await reservations.updateReservation('reservation', input)
+  await reservations.transitionReservation('reservation', 'cancel', true)
+  assert.equal(calls[0].url, '/api/admin/reservations')
+  assert.equal(calls[1].method, 'PATCH')
+  assert.deepEqual(JSON.parse(calls[1].body), input)
+  assert.equal(calls[2].url, '/api/admin/reservations/reservation/cancel')
+  assert.deepEqual(JSON.parse(calls[2].body), { teaReturned: true })
+  for (const call of calls) {
+    assert.equal(call.headers.get('X-CSRF-Token'), 'old-token')
+  }
+})
+
+test('reservation status conflicts and uncertain creation are not retried', async () => {
+  replies.push({
+    status: 409,
+    body: { code: 'INSUFFICIENT_STOCK', message: 'Not enough available stock' },
+  })
+  await assert.rejects(
+    reservations.transitionReservation('reservation', 'confirm'),
+    /Not enough available stock/
+  )
+  assert.equal(calls.length, 1)
+  replies.push({ error: new TypeError('Connection lost') })
+  await assert.rejects(
+    reservations.createReservation({ customerName: 'Anna', customerPhone: '+37529', lines: [] }),
+    /Connection lost/
+  )
+  assert.equal(calls.length, 2)
 })

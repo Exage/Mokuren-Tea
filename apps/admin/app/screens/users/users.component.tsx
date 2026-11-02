@@ -1,19 +1,19 @@
 import { requireAdminSession } from '@/app/shared/api/requests/admin-session'
-import { SectionPreview } from '@/app/shared/components/section-preview'
+import { PageHeading } from '@/app/shared/components/page-heading'
+import { UsersWorkspace } from './components/users-workspace'
+import styles from '@/app/shared/components/catalog-ui/catalog-ui.module.css'
 
 export async function UsersScreen() {
-  await requireAdminSession()
+  const user = await requireAdminSession()
 
   return (
-    <SectionPreview
-      eyebrow="Administration"
-      title="Administrators"
-      description="Manage administrator access to the store."
-      features={[
-        'Create and edit administrator accounts',
-        'Enable or disable access',
-        'Reset passwords and revoke sessions',
-      ]}
-    />
+    <div className={styles.stack}>
+      <PageHeading
+        eyebrow="Administration"
+        title="Administrators"
+        description="Manage administrator accounts and access to your store."
+      />
+      <UsersWorkspace currentUserId={user.id} />
+    </div>
   )
 }

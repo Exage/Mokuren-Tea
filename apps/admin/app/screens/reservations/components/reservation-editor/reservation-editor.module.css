@@ -1,0 +1,6 @@
+.form h2,
+.form h3 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 2.6rem;
+}
